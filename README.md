@@ -2,7 +2,7 @@
 
 A modern JSON and YAML visualization tool that transforms structured data into interactive node diagrams.
 
-![Jsonify Screenshot](https://via.placeholder.com/800x400?text=Jsonify+Screenshot)
+![Jsonify Screenshot](https://i.ibb.co/gLy0GTR/JSONcanvas.png)
 
 ## Features
 
