@@ -87,7 +87,7 @@ export const Editor: React.FC = () => {
   }, [rawData, selectedFormat]);
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden rounded-md">
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
         <h1 className="text-gray-700 font-semibold">Data Editor</h1>
         <div className="flex items-center gap-2">

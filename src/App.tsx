@@ -24,7 +24,7 @@ function App() {
       {/* Floating editor panel */}
       <div className={`
         fixed top-1.5 bottom-1.5 left-1.5 w-[400px] rounded-md bg-white border border-gray-200 z-50
-        transition-transform duration-300 md:translate-x-0
+        transition-transform duration-300 md:translate-x-0 overflow-hidden
         ${isEditorOpen ? 'translate-x-0' : '-translate-x-[calc(100%+6px)]'}
         max-w-[calc(100%-12px)] md:max-w-[400px]
       `}>
