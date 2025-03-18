@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { Background, useReactFlow, BackgroundVariant, FitViewOptions, Viewport } from 'reactflow';
-import { Download, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
-import { exportFlowAsSvg } from '../../utils/export/svgExport';
+import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 
 export const FlowControls: React.FC = () => {
   const { zoomIn, zoomOut, fitView, getViewport, setViewport, getNodes } = useReactFlow();
@@ -116,13 +115,6 @@ export const FlowControls: React.FC = () => {
           title="Fit View"
         >
           <Maximize size={16} />
-        </button>
-        <button
-          onClick={exportFlowAsSvg}
-          className={controlButton}
-          title="Export as SVG"
-        >
-          <Download size={16} />
         </button>
       </div>
     </>
