@@ -43,11 +43,11 @@ export interface ImportableAPIConfig {
 
 export interface EditorState {
   nodes: DataNode[];
-  selectedFormat: 'json' | 'yaml';
+  selectedFormat: 'json';
   rawData: string;
   apiRequest: APIRequest;
   updateRawData: (data: string) => void;
-  updateFormat: (format: 'json' | 'yaml') => void;
+  updateFormat: (format: 'json') => void;
   updateNodes: (nodes: DataNode[]) => void;
   toggleNodeExpansion: (nodeId: string) => void;
   updateApiUrl: (url: string) => void;

@@ -1,16 +1,14 @@
-# Jsonify
+# JSON Canvas
 
-A modern JSON and YAML visualization tool that transforms structured data into interactive node diagrams and includes a powerful API testing interface.
+A modern JSON visualization tool with an elegant monotone interface that transforms structured data into interactive node diagrams and includes a powerful API testing interface.
 
-![Jsonify Screenshot](https://i.ibb.co/gLy0GTRP/JSONcanvas.png)
+![JSON Canvas Screenshot](https://i.ibb.co/gLy0GTRP/JSONcanvas.png)
 
 ## Features
 
-- **Dual Format Support:** Edit and visualize both JSON and YAML data formats
 - **Interactive Visualization:** View your data as an interactive node diagram
 - **Real-time Sync:** See your changes reflected instantly in the visualization
 - **Code Editor:** Feature-rich editor with syntax highlighting
-- **Format Conversion:** Easily switch between JSON and YAML formats
 - **Example Data:** Generate example data with one click
 - **API Testing:** Built-in API request interface with support for various HTTP methods
 - **Authorization Support:** Multiple auth types including Bearer Token, Basic Auth, API Key, and OAuth 2.0
@@ -18,11 +16,21 @@ A modern JSON and YAML visualization tool that transforms structured data into i
 - **Import/Export:** Import API configurations from files and export results
 - **Responsive Design:** Works on both desktop and mobile devices
 - **Keyboard Shortcuts:** Format data using Cmd+Shift+F (Mac) or Ctrl+Shift+F (Windows/Linux)
+- **Elegant Monotone Interface:** Clean, focused design with a cohesive color palette
+
+## Color Palette
+
+JSON Canvas uses a carefully selected monotone color palette:
+
+- Primary: `#364CD5` - Primary accent color for important elements
+- Secondary: `#FFFBF5` - Background color for a clean, distraction-free experience
+- Accent1: `#5067F5` - Complementary shade for creating contrast with primary elements
+- Accent2: `#879AF8` - Light accent color for subtle highlights and interactive elements
 
 ## Use Cases
 
 - Visualize complex data structures
-- Debug JSON/YAML configurations
+- Debug JSON configurations
 - Test and explore API endpoints
 - Analyze API responses
 - Teaching data structures and API interactions
@@ -51,8 +59,8 @@ A modern JSON and YAML visualization tool that transforms structured data into i
 
 ```bash
 # Clone the repository
-git clone https://github.com/amankotia-ai/jsonify.git
-cd jsonify
+git clone https://github.com/amankotia-ai/json-canvas.git
+cd json-canvas
 
 # Install dependencies
 npm install
@@ -63,11 +71,10 @@ npm run dev
 
 ## Usage
 
-1. Enter or paste your JSON/YAML data in the editor panel
-2. Switch between formats using the dropdown
-3. Format your code with the format button or using keyboard shortcuts
-4. Explore the visualization by panning and zooming
-5. Toggle the editor panel on mobile by clicking the side menu button
+1. Enter or paste your JSON data in the editor panel
+2. Format your code with the format button or using keyboard shortcuts
+3. Explore the visualization by panning and zooming
+4. Toggle the editor panel on mobile by clicking the side menu button
 
 ### API Testing
 
@@ -77,12 +84,20 @@ npm run dev
 4. Send the request and view the response as formatted JSON
 5. The response will automatically be visualized in the node diagram
 
+## Design Principles
+
+JSON Canvas follows these design principles:
+
+- **Minimalism:** Clean interface that focuses attention on your data
+- **Coherence:** Consistent monotone color scheme across all elements
+- **Clarity:** Clear visual hierarchy with thoughtful use of contrast
+- **Focus:** Reduced visual noise to help you concentrate on what matters
+
 ## Future Enhancements
 
 - Export visualizations as images
-- Custom themes
+- Custom themes beyond the monotone palette
 - Save and share visualizations
-- Additional data format support
 - Advanced layout options
 - Search functionality
 - Webhooks testing

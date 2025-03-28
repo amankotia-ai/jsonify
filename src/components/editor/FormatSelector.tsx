@@ -7,7 +7,7 @@ export const FormatSelector: React.FC = () => {
   return (
     <select
       value={selectedFormat}
-      onChange={(e) => updateFormat(e.target.value as 'json' | 'yaml')}
+      onChange={(e) => updateFormat(e.target.value as 'json')}
       className="bg-white text-gray-700 text-sm font-medium rounded-md border border-gray-300 
                 h-8 pl-3 pr-8 appearance-none cursor-pointer hover:bg-gray-50
                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -19,7 +19,6 @@ export const FormatSelector: React.FC = () => {
       }}
     >
       <option value="json">JSON</option>
-      <option value="yaml">YAML</option>
     </select>
   );
 };

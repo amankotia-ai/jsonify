@@ -34,17 +34,17 @@ export const ObjectNode: React.FC<DataNodeProps> = ({ data }) => {
         <Handle
           type="target"
           position={Position.Left}
-          className="!w-2 !h-2 !bg-gray-400 !border-2 !border-white"
+          className="!w-2 !h-2 !bg-primary/70 !border-2 !border-white"
         />
-        <div className="bg-white rounded-lg border border-gray-200 w-[320px]">
+        <div className="bg-[#F4F6FF] rounded-lg border border-accent2/30 w-[320px]">
           <div className="p-3">
-            <span className="text-gray-700 font-medium">{nodeData.key || 'Unknown'}</span>
+            <span className="text-primary font-medium">{nodeData.key || 'Unknown'}</span>
           </div>
         </div>
         <Handle
           type="source"
           position={Position.Right}
-          className="!w-2 !h-2 !bg-gray-400 !border-2 !border-white"
+          className="!w-2 !h-2 !bg-primary/70 !border-2 !border-white"
         />
       </div>
     );
@@ -142,31 +142,31 @@ export const ObjectNode: React.FC<DataNodeProps> = ({ data }) => {
       <Handle
         type="target"
         position={Position.Left}
-        className="!w-2 !h-2 !bg-gray-400 !border-2 !border-white"
+        className="!w-2 !h-2 !bg-primary/70 !border-2 !border-white"
       />
       
       <div 
-        className="bg-white rounded-lg border border-gray-200"
+        className="bg-[#F4F6FF] rounded-lg border border-accent2/30"
         style={{ width: `${nodeWidth}px`, maxWidth: '90vw' }}
       >
-        <div className="flex items-center gap-2 p-3 border-b border-gray-100">
+        <div className="flex items-center gap-2 p-3 border-b border-accent2/20">
           <button
             onClick={() => toggleNodeExpansion(typedData.id)}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
+            className="text-accent1 hover:text-primary transition-colors"
           >
             {expanded ? <Minus size={14} /> : <Plus size={14} />}
           </button>
-          <span className="text-gray-700 font-medium">{typedData.key}</span>
-          <span className="text-gray-400 text-sm">
+          <span className="text-primary font-medium">{typedData.key}</span>
+          <span className="text-accent1 text-sm">
             {typedData.type === 'array' ? '[]' : '{}'}
           </span>
           {simpleProperties.length > 0 && (
-            <span className="text-gray-400 text-xs ml-2">
+            <span className="text-accent1 text-xs ml-2">
               {simpleProperties.length} {simpleProperties.length === 1 ? 'property' : 'properties'}
             </span>
           )}
           {simplePropertyColumns.length > 1 && (
-            <span className="text-gray-400 text-xs ml-2">
+            <span className="text-accent1 text-xs ml-2">
               ({simplePropertyColumns.length} columns)
             </span>
           )}
@@ -191,7 +191,7 @@ export const ObjectNode: React.FC<DataNodeProps> = ({ data }) => {
           )}
 
           {simpleProperties.length > 0 && (childNodesInfo.length > 0 || complexProperties.length > 0) && (
-            <div className="border-t border-gray-100 my-2" />
+            <div className="border-t border-accent2/20 my-2" />
           )}
 
           {/* Display child nodes information in a cleaner format */}
@@ -199,8 +199,8 @@ export const ObjectNode: React.FC<DataNodeProps> = ({ data }) => {
             <div className={childNodesInfo.length > 2 ? "grid grid-cols-2 gap-2" : ""}>
               {childNodesInfo.map(child => (
                 <div key={child.key} className="flex items-center gap-2 py-1.5 px-2 text-sm">
-                  <span className="text-blue-600 font-medium">{child.key}:</span>
-                  <span className="text-gray-500">
+                  <span className="text-primary font-medium">{child.key}:</span>
+                  <span className="text-accent1">
                     {child.propertyCount} {child.propertyCount === 1 ? 'property' : 'properties'}
                   </span>
                 </div>
@@ -209,7 +209,7 @@ export const ObjectNode: React.FC<DataNodeProps> = ({ data }) => {
           )}
 
           {childNodesInfo.length > 0 && complexProperties.length > 0 && (
-            <div className="border-t border-gray-100 my-2" />
+            <div className="border-t border-accent2/20 my-2" />
           )}
 
           {/* Complex properties in a more compressed view */}
@@ -227,7 +227,7 @@ export const ObjectNode: React.FC<DataNodeProps> = ({ data }) => {
       <Handle
         type="source"
         position={Position.Right}
-        className="!w-2 !h-2 !bg-gray-400 !border-2 !border-white"
+        className="!w-2 !h-2 !bg-primary/70 !border-2 !border-white"
       />
     </div>
   );

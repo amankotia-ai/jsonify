@@ -12,7 +12,7 @@ interface ApiPanelProps {
 
 type AuthType = 'noAuth' | 'bearerToken' | 'basicAuth' | 'apiKey' | 'oauth2';
 
-// Example API calls from the list
+// Example API calls from the list (kept for examples tab only)
 const exampleApiCalls = [
   {
     url: 'https://fake-json-api.mock.beeceptor.com/users',
@@ -227,15 +227,15 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
   const shouldShowPanel = isOpen || isPanelOpen;
 
   const methods = [
-    { value: 'GET', color: 'bg-green-100 text-green-800' },
-    { value: 'POST', color: 'bg-blue-100 text-blue-800' },
-    { value: 'PUT', color: 'bg-yellow-100 text-yellow-800' },
-    { value: 'DELETE', color: 'bg-red-100 text-red-800' },
-    { value: 'PATCH', color: 'bg-purple-100 text-purple-800' }
+    { value: 'GET' },
+    { value: 'POST' },
+    { value: 'PUT' },
+    { value: 'DELETE' },
+    { value: 'PATCH' }
   ];
 
   const getMethodColor = (method: string) => {
-    return methods.find(m => m.value === method)?.color || '';
+    return 'bg-[#F4F6FF] text-primary';
   };
 
   const formatRequestBody = () => {
@@ -257,713 +257,656 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
     
-    setImportError(null);
-    
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const content = event.target?.result as string;
-        const json = JSON.parse(content);
-        importApiRequest(json);
-      } catch (error) {
-        setImportError("Failed to import. Please make sure the file contains valid JSON.");
-        console.error('Import error:', error);
+        const data = JSON.parse(content);
+        
+        if (importApiRequest) {
+          importApiRequest(data);
+          setImportError(null);
+        }
+      } catch (err) {
+        setImportError('Invalid JSON format');
+        console.error('Import error:', err);
       }
     };
-    
-    reader.onerror = () => {
-      setImportError("Error reading file. Please try again.");
-    };
-    
     reader.readAsText(file);
     
-    // Clear the input
+    // Reset the input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
-
-  // Update headers based on authorization
+  
+  // Update auth headers based on auth type
   const updateAuthorizationHeaders = (type: AuthType) => {
     setAuthType(type);
-    const newHeaders = { ...apiRequest.headers };
     
-    // First remove any existing auth headers
+    // Reset all auth headers first
+    const newHeaders = { ...apiRequest.headers };
     delete newHeaders['Authorization'];
     delete newHeaders[apiKeyName];
     
-    // Add new auth headers based on type
-    if (type === 'bearerToken' && bearerToken) {
-      newHeaders['Authorization'] = `Bearer ${bearerToken}`;
-    } else if (type === 'basicAuth' && basicAuthUsername) {
-      const credentials = btoa(`${basicAuthUsername}:${basicAuthPassword}`);
-      newHeaders['Authorization'] = `Basic ${credentials}`;
-    } else if (type === 'apiKey' && apiKeyName && apiKeyValue && apiKeyLocation === 'header') {
-      newHeaders[apiKeyName] = apiKeyValue;
+    // Set appropriate auth headers based on type
+    switch (type) {
+      case 'bearerToken':
+        if (bearerToken) {
+          newHeaders['Authorization'] = `Bearer ${bearerToken}`;
+        }
+        break;
+      case 'basicAuth':
+        if (basicAuthUsername && basicAuthPassword) {
+          const encoded = btoa(`${basicAuthUsername}:${basicAuthPassword}`);
+          newHeaders['Authorization'] = `Basic ${encoded}`;
+        }
+        break;
+      case 'apiKey':
+        if (apiKeyName && apiKeyValue) {
+          if (apiKeyLocation === 'header') {
+            newHeaders[apiKeyName] = apiKeyValue;
+          }
+          // Query params handled separately when making the request
+        }
+        break;
+      case 'oauth2':
+        if (oauthAccessToken) {
+          newHeaders['Authorization'] = `Bearer ${oauthAccessToken}`;
+        }
+        break;
     }
     
     updateApiHeaders(newHeaders);
-    
-    // If API Key is in query params, update the URL
-    if (type === 'apiKey' && apiKeyName && apiKeyValue && apiKeyLocation === 'query') {
-      const url = new URL(apiRequest.url || 'https://example.com');
-      url.searchParams.set(apiKeyName, apiKeyValue);
-      updateApiUrl(url.toString());
-    }
   };
 
   return (
     <>
-      {/* Hidden file input */}
+      {/* Import file input (hidden) */}
       <input 
         type="file" 
         ref={fileInputRef} 
-        className="hidden" 
+        style={{ display: 'none' }} 
         accept=".json"
         onChange={handleFileImport}
       />
+    
+      {/* Floating toggle button */}
+      {showFloatingButton && !shouldShowPanel && (
+        <motion.button
+          onClick={handleOpen}
+          className="fixed bottom-4 right-4 z-[100] bg-secondary shadow-lg rounded-full p-3 border border-accent2 text-primary"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Globe size={24} />
+        </motion.button>
+      )}
       
-      {/* Collapsed view - button to open panel */}
-      <AnimatePresence>
-        {!shouldShowPanel && !isOpen && showFloatingButton && (
-          <motion.div 
-            className="fixed top-6 right-6 z-[100]"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            <motion.button
-              onClick={handleOpen}
-              className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-lg transition-colors"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Globe className="mr-2" size={16} />
-              API Request
-            </motion.button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Expanded panel */}
+      {/* Main API Panel */}
       <AnimatePresence>
         {shouldShowPanel && (
-          <motion.div 
-            className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-[1000] flex items-center justify-center p-4 md:p-6"
+          <motion.div
+            className="fixed inset-0 bg-black bg-opacity-50 z-[1000] flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.3 }}
           >
-            <motion.div 
-              className="bg-white rounded-lg shadow-2xl w-full max-w-5xl h-[calc(100vh-2rem)] md:h-[calc(100vh-3rem)] flex flex-col overflow-hidden"
-              initial={{ opacity: 0, y: '100%' }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: '100%' }}
-              transition={{ 
-                type: "tween", 
-                duration: 0.35,
-                ease: [0.16, 1, 0.3, 1] // Custom cubic-bezier curve
-              }}
+            <motion.div
+              className="bg-secondary rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.3 }}
             >
-              {/* Panel header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                <div className="flex items-center">
-                  <motion.h2 
-                    className="text-xl font-semibold text-gray-800"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2, delay: 0.1, ease: [0.34, 1.56, 0.64, 1] }}
-                  >API Request</motion.h2>
-                </div>
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <motion.button 
-                    className="flex items-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors text-sm font-medium"
-                    title="Import API"
-                    onClick={handleImportClick}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2, delay: 0.12, ease: [0.34, 1.56, 0.64, 1] }}
-                  >
-                    <Download size={14} className="mr-1.5" />
-                    Import
-                  </motion.button>
-                  <motion.button 
-                    className="p-2 hover:bg-gray-100 rounded-full text-gray-500"
-                    onClick={handleClose}
-                    title="Close"
-                    whileHover={{ scale: 1.1, backgroundColor: "rgb(243 244 246)" }}
-                    whileTap={{ scale: 0.95 }}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2, delay: 0.14, ease: [0.34, 1.56, 0.64, 1] }}
-                  >
-                    <X size={20} />
-                  </motion.button>
+                  <Globe className="text-primary" size={20} />
+                  <h2 className="text-lg font-medium text-primary">API Request</h2>
                 </div>
+                <button 
+                  onClick={handleClose}
+                  className="text-accent1 hover:text-primary rounded-full p-1 transition-colors"
+                >
+                  <X size={20} />
+                </button>
               </div>
               
-              {/* Import error message */}
-              <AnimatePresence>
-                {importError && (
-                  <motion.div 
-                    className="mx-6 mt-4 flex items-start p-3 bg-red-50 rounded-md border border-red-200 text-red-700 text-sm"
-                    initial={{ opacity: 0, y: -10, height: 0 }}
-                    animate={{ opacity: 1, y: 0, height: "auto" }}
-                    exit={{ opacity: 0, y: -10, height: 0 }}
-                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                  >
-                    <AlertCircle size={18} className="mr-2 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium mb-0.5">Import failed</p>
-                      <p className="text-red-600">{importError}</p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              
-              {/* Request section */}
-              <div className="flex-1 overflow-auto">
-                <motion.div 
-                  className="p-6 space-y-6"
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.25, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-                >
-                  {/* URL Bar with Method Selector */}
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-700">URL</label>
-                    <div className="flex">
-                      <select
-                        value={apiRequest.method}
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* URL Bar */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="flex-shrink-0 w-28">
+                      <select 
+                        value={apiRequest.method} 
                         onChange={handleMethodChange}
-                        className={`h-10 rounded-l-md border border-gray-300 font-medium px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[95px] ${getMethodColor(apiRequest.method)}`}
+                        className="bg-[#F4F6FF] text-primary text-sm font-medium rounded px-2 py-2 pr-8 border border-accent2/30 focus:outline-none focus:ring-1 focus:ring-primary appearance-none h-[42px] w-full"
+                        style={{ backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23364CD5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`, backgroundPosition: 'right 8px center', backgroundSize: '16px', backgroundRepeat: 'no-repeat' }}
                       >
                         {methods.map(method => (
                           <option key={method.value} value={method.value}>{method.value}</option>
                         ))}
                       </select>
-                      
-                      <div className="relative flex-1">
-                        <input
-                          type="text"
-                          value={apiRequest.url}
-                          onChange={(e) => updateApiUrl(e.target.value)}
-                          placeholder="https://api.example.com/endpoint"
-                          className="h-10 w-full rounded-r-md border border-l-0 border-gray-300 px-3 pr-10
-                                  text-sm text-gray-700 focus:outline-none focus:ring-2 
-                                  focus:ring-blue-500 focus:border-blue-500"
-                        />
-                        <button 
-                          onClick={copyUrlToClipboard}
-                          className="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
-                          title="Copy URL"
-                        >
-                          {copySuccess ? <CheckCircle size={16} className="text-green-500" /> : <Clipboard size={16} />}
-                        </button>
-                      </div>
-                      
-                      <button
-                        onClick={handleSendRequest}
-                        disabled={apiRequest.loading}
-                        className={`ml-2 h-10 px-5 rounded-md flex items-center justify-center 
-                                  text-white font-medium transition-colors ${apiRequest.loading 
-                                              ? 'bg-blue-400 cursor-not-allowed' 
-                                              : 'bg-blue-600 hover:bg-blue-700 shadow-sm'}`}
-                      >
-                        {apiRequest.loading ? (
-                          <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Sending...
-                          </>
-                        ) : (
-                          <>
-                            <Send size={16} className="mr-1.5" />
-                            Send
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Error Message */}
-                  <AnimatePresence>
-                    {apiRequest.error && (
-                      <motion.div 
-                        className="flex items-start p-3 bg-red-50 rounded-md border border-red-200 text-red-700 text-sm"
-                        initial={{ opacity: 0, y: -10, height: 0 }}
-                        animate={{ opacity: 1, y: 0, height: "auto" }}
-                        exit={{ opacity: 0, y: -10, height: 0 }}
-                        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                      >
-                        <AlertCircle size={18} className="mr-2 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="font-medium mb-0.5">Request failed</p>
-                          <p className="text-red-600">{apiRequest.error}</p>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  
-                  {/* Request options tabs */}
-                  <motion.div 
-                    className="border border-gray-200 rounded-md overflow-hidden"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.25, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                  >
-                    <div className="bg-gray-50 border-b border-gray-200">
-                      <div className="flex">
-                        {['params', 'authorization', 'headers', 'body', 'examples'].map((tab) => (
-                          <button
-                            key={tab}
-                            className={`
-                              px-4 py-2 text-sm font-medium relative
-                              ${activeTab === tab 
-                                ? 'text-blue-600' 
-                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}
-                            `}
-                            onClick={() => setActiveTab(tab)}
-                          >
-                            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                            {activeTab === tab && (
-                              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
-                            )}
-                          </button>
-                        ))}
-                      </div>
                     </div>
                     
-                    <div className="p-4">
-                      {activeTab === 'headers' && (
-                        <div className="space-y-3">
-                          {/* Headers List */}
-                          {Object.entries(apiRequest.headers).length > 0 ? (
-                            <div className="space-y-2">
-                              {Object.entries(apiRequest.headers).map(([key, value]) => (
-                                <div key={key} className="flex items-center gap-2">
-                                  <input
-                                    type="text"
-                                    value={key}
-                                    disabled
-                                    className="h-9 w-1/3 rounded-md border border-gray-300 px-3 
-                                            text-sm font-medium text-gray-700 bg-gray-50"
-                                  />
-                                  <input
-                                    type="text"
-                                    value={value}
-                                    onChange={(e) => {
-                                      const newHeaders = { ...apiRequest.headers, [key]: e.target.value };
-                                      updateApiHeaders(newHeaders);
-                                    }}
-                                    className="h-9 flex-1 rounded-md border border-gray-300 px-3 
-                                            text-sm text-gray-700 focus:outline-none focus:ring-2 
-                                            focus:ring-blue-500 focus:border-blue-500"
-                                  />
-                                  <button
-                                    onClick={() => removeHeader(key)}
-                                    className="h-9 w-9 flex items-center justify-center text-gray-500 
-                                              hover:text-red-500 hover:bg-gray-100 rounded-md"
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="py-2 text-sm text-gray-500 italic">No headers added yet</div>
+                    <div className="flex-1 relative group">
+                      <input 
+                        type="text" 
+                        value={apiRequest.url} 
+                        onChange={(e) => updateApiUrl(e.target.value)}
+                        placeholder="Enter API URL e.g. https://api.example.com/data"
+                        className="w-full h-[42px] py-2 px-3 border border-accent2/30 rounded focus:outline-none focus:ring-1 focus:ring-primary text-sm bg-secondary"
+                      />
+                      
+                      <button 
+                        onClick={copyUrlToClipboard}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-accent1 hover:text-primary transition-colors"
+                        title="Copy URL"
+                      >
+                        {copySuccess ? <CheckCircle size={16} /> : <Clipboard size={16} />}
+                      </button>
+                    </div>
+                    
+                    <button
+                      onClick={handleSendRequest}
+                      disabled={apiRequest.loading || !apiRequest.url.trim()}
+                      className={`h-[42px] px-4 rounded font-medium text-sm flex items-center justify-center transition-colors ${
+                        apiRequest.loading || !apiRequest.url.trim() 
+                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+                          : 'bg-primary text-white hover:bg-primary/90'
+                      }`}
+                    >
+                      {apiRequest.loading ? (
+                        <div className="animate-spin h-4 w-4 border-2 border-white/30 border-t-white rounded-full mr-1" />
+                      ) : (
+                        <Send size={16} className="mr-1" />
+                      )}
+                      {apiRequest.loading ? 'Sending...' : 'Send'}
+                    </button>
+                  </div>
+                  
+                  {/* Removed URL suggestions/example buttons */}
+                </div>
+
+                {/* Error Message */}
+                <AnimatePresence>
+                  {apiRequest.error && (
+                    <motion.div 
+                      className="flex items-start p-3 bg-primary/5 rounded-md border border-primary/20 text-primary text-sm"
+                      initial={{ opacity: 0, y: -10, height: 0 }}
+                      animate={{ opacity: 1, y: 0, height: "auto" }}
+                      exit={{ opacity: 0, y: -10, height: 0 }}
+                      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                    >
+                      <AlertCircle size={18} className="mr-2 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium mb-0.5">Request failed</p>
+                        <p className="text-primary/80">{apiRequest.error}</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                
+                {/* Request options tabs - fixed height container */}
+                <motion.div 
+                  className="border border-accent2/30 rounded-md overflow-hidden"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <div className="bg-accent2/5 border-b border-accent2/30">
+                    <div className="flex">
+                      {['params', 'authorization', 'headers', 'body', 'examples'].map((tab) => (
+                        <button
+                          key={tab}
+                          className={`
+                            px-4 py-2 text-sm font-medium relative
+                            ${activeTab === tab 
+                              ? 'text-primary' 
+                              : 'text-accent1 hover:text-primary hover:bg-accent2/10'}
+                          `}
+                          onClick={() => setActiveTab(tab)}
+                        >
+                          {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                          {activeTab === tab && (
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
                           )}
-                          
-                          {/* Add New Header */}
-                          <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Fixed height content area */}
+                  <div className="p-4 overflow-y-auto" style={{ height: '300px' }}>
+                    {activeTab === 'headers' && (
+                      <div className="space-y-3">
+                        {/* Headers List */}
+                        {Object.entries(apiRequest.headers).length > 0 ? (
+                          <div className="space-y-2">
+                            {Object.entries(apiRequest.headers).map(([key, value]) => (
+                              <div key={key} className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={key}
+                                  disabled
+                                  className="h-9 w-1/3 rounded-md border border-accent2/30 px-3 
+                                          text-sm font-medium text-primary bg-accent2/5"
+                                />
+                                <input
+                                  type="text"
+                                  value={value}
+                                  onChange={(e) => {
+                                    const newHeaders = { ...apiRequest.headers, [key]: e.target.value };
+                                    updateApiHeaders(newHeaders);
+                                  }}
+                                  className="h-9 flex-1 rounded-md border border-accent2/30 px-3 
+                                          text-sm text-primary focus:outline-none focus:ring-1 
+                                          focus:ring-primary focus:border-primary bg-secondary"
+                                />
+                                <button
+                                  onClick={() => removeHeader(key)}
+                                  className="h-9 w-9 flex items-center justify-center text-accent1 
+                                            hover:text-primary hover:bg-accent2/10 rounded-md"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="py-2 text-sm text-accent1 italic">No headers added yet</div>
+                        )}
+                        
+                        {/* Add New Header */}
+                        <div className="flex items-center gap-2 pt-2 border-t border-accent2/10">
+                          <input
+                            type="text"
+                            value={newHeaderKey}
+                            onChange={(e) => setNewHeaderKey(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder="Header Name"
+                            className="h-9 w-1/3 rounded-md border border-accent2/30 px-3 
+                                    text-sm text-primary focus:outline-none focus:ring-1 
+                                    focus:ring-primary focus:border-primary bg-secondary"
+                          />
+                          <input
+                            type="text"
+                            value={newHeaderValue}
+                            onChange={(e) => setNewHeaderValue(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder="Value"
+                            className="h-9 flex-1 rounded-md border border-accent2/30 px-3 
+                                    text-sm text-primary focus:outline-none focus:ring-1 
+                                    focus:ring-primary focus:border-primary bg-secondary"
+                          />
+                          <button
+                            onClick={addHeader}
+                            disabled={!newHeaderKey.trim()}
+                            className={`h-9 px-3 rounded-md flex items-center justify-center
+                                      ${!newHeaderKey.trim() 
+                                        ? 'bg-accent2/5 text-accent1/50 cursor-not-allowed'
+                                        : 'bg-primary/10 text-primary hover:bg-primary/20'}`}
+                          >
+                            <Plus size={16} className="mr-1" />
+                            Add
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {activeTab === 'body' && (
+                      <div>
+                        <div className="mb-2 flex items-center space-x-2">
+                          <label className="flex items-center">
+                            <input type="radio" name="body-type" className="mr-1.5 text-primary" defaultChecked />
+                            <span className="text-sm font-medium text-primary">raw</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input type="radio" name="body-type" className="mr-1.5 text-primary" />
+                            <span className="text-sm font-medium text-primary">form-data</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input type="radio" name="body-type" className="mr-1.5 text-primary" />
+                            <span className="text-sm font-medium text-primary">x-www-form-urlencoded</span>
+                          </label>
+                        </div>
+                        
+                        <textarea
+                          value={apiRequest.body}
+                          onChange={(e) => updateApiBody(e.target.value)}
+                          placeholder='{\n  "key": "value"\n}'
+                          className="w-full rounded-md border border-accent2/30 p-3 h-36
+                                   text-sm text-primary focus:outline-none focus:ring-1 
+                                   focus:ring-primary focus:border-primary bg-secondary font-mono"
+                        />
+                        <div className="mt-2 flex justify-end">
+                          <button
+                            onClick={formatRequestBody}
+                            className="text-xs text-primary hover:text-primary/80 font-medium"
+                          >
+                            Format JSON
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {activeTab === 'params' && (
+                      <div className="py-2 text-sm">
+                        <p className="text-accent1 mb-2">Add query parameters to the URL:</p>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
                             <input
                               type="text"
-                              value={newHeaderKey}
-                              onChange={(e) => setNewHeaderKey(e.target.value)}
-                              onKeyDown={handleKeyDown}
-                              placeholder="Header Name"
-                              className="h-9 w-1/3 rounded-md border border-gray-300 px-3 
-                                      text-sm text-gray-700 focus:outline-none focus:ring-2 
-                                      focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Parameter name"
+                              className="h-9 w-1/3 rounded-md border border-accent2/30 px-3 
+                                      text-sm text-primary focus:outline-none focus:ring-1 
+                                      focus:ring-primary focus:border-primary bg-secondary"
                             />
                             <input
                               type="text"
-                              value={newHeaderValue}
-                              onChange={(e) => setNewHeaderValue(e.target.value)}
-                              onKeyDown={handleKeyDown}
                               placeholder="Value"
-                              className="h-9 flex-1 rounded-md border border-gray-300 px-3 
-                                      text-sm text-gray-700 focus:outline-none focus:ring-2 
-                                      focus:ring-blue-500 focus:border-blue-500"
+                              className="h-9 flex-1 rounded-md border border-accent2/30 px-3 
+                                      text-sm text-primary focus:outline-none focus:ring-1 
+                                      focus:ring-primary focus:border-primary bg-secondary"
                             />
                             <button
-                              onClick={addHeader}
-                              disabled={!newHeaderKey.trim()}
-                              className={`h-9 px-3 rounded-md flex items-center justify-center
-                                        ${!newHeaderKey.trim() 
-                                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                          : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+                              className="h-9 px-3 rounded-md flex items-center justify-center
+                                        bg-primary/10 text-primary hover:bg-primary/20"
                             >
                               <Plus size={16} className="mr-1" />
                               Add
                             </button>
                           </div>
+                          <p className="text-xs text-accent1 mt-2">
+                            Parameters will be added as <span className="font-mono bg-accent2/10 px-1">?param=value</span> to the URL
+                          </p>
                         </div>
-                      )}
-                      
-                      {activeTab === 'body' && (
-                        <div>
-                          <div className="mb-2 flex items-center space-x-2">
-                            <label className="flex items-center">
-                              <input type="radio" name="body-type" className="mr-1.5" defaultChecked />
-                              <span className="text-sm font-medium">raw</span>
-                            </label>
-                            <label className="flex items-center">
-                              <input type="radio" name="body-type" className="mr-1.5" />
-                              <span className="text-sm font-medium">form-data</span>
-                            </label>
-                            <label className="flex items-center">
-                              <input type="radio" name="body-type" className="mr-1.5" />
-                              <span className="text-sm font-medium">x-www-form-urlencoded</span>
-                            </label>
-                          </div>
-                          
-                          <textarea
-                            value={apiRequest.body}
-                            onChange={(e) => updateApiBody(e.target.value)}
-                            placeholder='{\n  "key": "value"\n}'
-                            className="w-full rounded-md border border-gray-300 p-3 h-36
-                                     text-sm text-gray-700 focus:outline-none focus:ring-2 
-                                     focus:ring-blue-500 focus:border-blue-500 font-mono"
-                          />
-                          <div className="mt-2 flex justify-end">
-                            <button
-                              onClick={formatRequestBody}
-                              className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                      </div>
+                    )}
+                    
+                    {activeTab === 'examples' && (
+                      <div className="py-2 text-sm">
+                        <h3 className="text-sm font-medium text-primary mb-2">Example API calls</h3>
+                        <div className="space-y-2">
+                          {exampleApiCalls.map((example, index) => (
+                            <div 
+                              key={index}
+                              className="p-2 border border-accent2/30 rounded-md hover:bg-accent2/10 cursor-pointer"
+                              onClick={() => updateApiUrl(example.url)}
+                              title="Click to use this API"
                             >
-                              Format JSON
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {activeTab === 'params' && (
-                        <div className="py-2 text-sm">
-                          <p className="text-gray-500 mb-2">Add query parameters to the URL:</p>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="text"
-                                placeholder="Parameter name"
-                                className="h-9 w-1/3 rounded-md border border-gray-300 px-3 
-                                        text-sm text-gray-700 focus:outline-none focus:ring-2 
-                                        focus:ring-blue-500 focus:border-blue-500"
-                              />
-                              <input
-                                type="text"
-                                placeholder="Value"
-                                className="h-9 flex-1 rounded-md border border-gray-300 px-3 
-                                        text-sm text-gray-700 focus:outline-none focus:ring-2 
-                                        focus:ring-blue-500 focus:border-blue-500"
-                              />
-                              <button
-                                className="h-9 px-3 rounded-md flex items-center justify-center
-                                          bg-blue-50 text-blue-600 hover:bg-blue-100"
-                              >
-                                <Plus size={16} className="mr-1" />
-                                Add
-                              </button>
+                              <p className="text-sm font-medium text-primary font-mono mb-1">{example.url}</p>
+                              <p className="text-xs text-accent1">{example.description}</p>
                             </div>
-                            <p className="text-xs text-gray-500 mt-2">
-                              Parameters will be added as <span className="font-mono">?param=value</span> to the URL
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {activeTab === 'authorization' && (
+                      <div className="py-2 text-sm space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-primary mb-1">Type</label>
+                          <select 
+                            className="w-full h-9 rounded-md border border-accent2/30 px-3 text-sm text-primary 
+                                      focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-secondary"
+                            value={authType}
+                            onChange={(e) => updateAuthorizationHeaders(e.target.value as AuthType)}
+                          >
+                            <option value="noAuth">No Auth</option>
+                            <option value="bearerToken">Bearer Token</option>
+                            <option value="basicAuth">Basic Auth</option>
+                            <option value="apiKey">API Key</option>
+                            <option value="oauth2">OAuth 2.0</option>
+                          </select>
+                        </div>
+                        
+                        {/* Bearer Token Auth */}
+                        {authType === 'bearerToken' && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-primary">Token</label>
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={bearerToken}
+                                onChange={(e) => {
+                                  setBearerToken(e.target.value);
+                                  if (e.target.value) {
+                                    const newHeaders = { ...apiRequest.headers };
+                                    newHeaders['Authorization'] = `Bearer ${e.target.value}`;
+                                    updateApiHeaders(newHeaders);
+                                  }
+                                }}
+                                placeholder="Enter token"
+                                className="h-9 w-full rounded-md border border-accent2/30 pl-9 pr-3 
+                                        text-sm text-primary focus:outline-none focus:ring-1 
+                                        focus:ring-primary focus:border-primary bg-secondary"
+                              />
+                              <Key size={16} className="absolute left-3 top-2.5 text-accent1" />
+                            </div>
+                            <p className="text-xs text-accent1 mt-1">
+                              Token will be sent as: <span className="font-mono bg-accent2/10 px-1">Authorization: Bearer {bearerToken || 'token'}</span>
                             </p>
                           </div>
-                        </div>
-                      )}
-                      
-                      {activeTab === 'examples' && (
-                        <div className="py-2 text-sm">
-                          <h3 className="text-sm font-medium text-gray-700 mb-2">Example API calls</h3>
-                          <div className="space-y-2">
-                            {exampleApiCalls.map((example, index) => (
-                              <div 
-                                key={index}
-                                className="p-2 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer"
-                                onClick={() => updateApiUrl(example.url)}
-                                title="Click to use this API"
-                              >
-                                <p className="text-sm font-medium text-blue-600 font-mono mb-1">{example.url}</p>
-                                <p className="text-xs text-gray-600">{example.description}</p>
+                        )}
+                        
+                        {/* Basic Auth */}
+                        {authType === 'basicAuth' && (
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-sm font-medium text-primary mb-1">Username</label>
+                              <input
+                                type="text"
+                                value={basicAuthUsername}
+                                onChange={(e) => {
+                                  setBasicAuthUsername(e.target.value);
+                                  if (e.target.value) {
+                                    const credentials = btoa(`${e.target.value}:${basicAuthPassword}`);
+                                    const newHeaders = { ...apiRequest.headers };
+                                    newHeaders['Authorization'] = `Basic ${credentials}`;
+                                    updateApiHeaders(newHeaders);
+                                  }
+                                }}
+                                placeholder="Username"
+                                className="h-9 w-full rounded-md border border-accent2/30 px-3 
+                                        text-sm text-primary focus:outline-none focus:ring-1 
+                                        focus:ring-primary focus:border-primary bg-secondary"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-primary mb-1">Password</label>
+                              <div className="relative">
+                                <input
+                                  type="password"
+                                  value={basicAuthPassword}
+                                  onChange={(e) => {
+                                    setBasicAuthPassword(e.target.value);
+                                    if (basicAuthUsername) {
+                                      const credentials = btoa(`${basicAuthUsername}:${e.target.value}`);
+                                      const newHeaders = { ...apiRequest.headers };
+                                      newHeaders['Authorization'] = `Basic ${credentials}`;
+                                      updateApiHeaders(newHeaders);
+                                    }
+                                  }}
+                                  placeholder="Password"
+                                  className="h-9 w-full rounded-md border border-accent2/30 pl-9 pr-3 
+                                          text-sm text-primary focus:outline-none focus:ring-1 
+                                          focus:ring-primary focus:border-primary bg-secondary"
+                                />
+                                <Lock size={16} className="absolute left-3 top-2.5 text-accent1" />
                               </div>
-                            ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      
-                      {activeTab === 'authorization' && (
-                        <div className="py-2 text-sm space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                            <select 
-                              className="w-full h-9 rounded-md border border-gray-300 px-3 text-sm"
-                              value={authType}
-                              onChange={(e) => updateAuthorizationHeaders(e.target.value as AuthType)}
-                            >
-                              <option value="noAuth">No Auth</option>
-                              <option value="bearerToken">Bearer Token</option>
-                              <option value="basicAuth">Basic Auth</option>
-                              <option value="apiKey">API Key</option>
-                              <option value="oauth2">OAuth 2.0</option>
-                            </select>
-                          </div>
-                          
-                          {/* Bearer Token Auth */}
-                          {authType === 'bearerToken' && (
-                            <div className="space-y-2">
-                              <label className="block text-sm font-medium text-gray-700">Token</label>
+                        )}
+                        
+                        {/* API Key Auth */}
+                        {authType === 'apiKey' && (
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-sm font-medium text-primary mb-1">Key Name</label>
+                              <input
+                                type="text"
+                                value={apiKeyName}
+                                onChange={(e) => setApiKeyName(e.target.value)}
+                                placeholder="API Key Name (e.g. X-API-Key)"
+                                className="h-9 w-full rounded-md border border-accent2/30 px-3 
+                                        text-sm text-primary focus:outline-none focus:ring-1 
+                                        focus:ring-primary focus:border-primary bg-secondary"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-primary mb-1">Key Value</label>
                               <div className="relative">
                                 <input
                                   type="text"
-                                  value={bearerToken}
+                                  value={apiKeyValue}
+                                  onChange={(e) => setApiKeyValue(e.target.value)}
+                                  placeholder="API Key Value"
+                                  className="h-9 w-full rounded-md border border-accent2/30 pl-9 pr-3 
+                                          text-sm text-primary focus:outline-none focus:ring-1 
+                                          focus:ring-primary focus:border-primary bg-secondary"
+                                />
+                                <Key size={16} className="absolute left-3 top-2.5 text-accent1" />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-primary mb-1">Add to</label>
+                              <div className="flex gap-4">
+                                <label className="flex items-center">
+                                  <input 
+                                    type="radio" 
+                                    name="api-key-location"
+                                    checked={apiKeyLocation === 'header'} 
+                                    onChange={() => setApiKeyLocation('header')}
+                                    className="mr-1.5 text-primary" 
+                                  />
+                                  <span className="text-sm text-primary">Header</span>
+                                </label>
+                                <label className="flex items-center">
+                                  <input 
+                                    type="radio" 
+                                    name="api-key-location" 
+                                    checked={apiKeyLocation === 'query'}
+                                    onChange={() => setApiKeyLocation('query')}
+                                    className="mr-1.5 text-primary" 
+                                  />
+                                  <span className="text-sm text-primary">Query Param</span>
+                                </label>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                if (apiKeyName && apiKeyValue) {
+                                  if (apiKeyLocation === 'header') {
+                                    const newHeaders = { ...apiRequest.headers };
+                                    newHeaders[apiKeyName] = apiKeyValue;
+                                    updateApiHeaders(newHeaders);
+                                  } else {
+                                    // Add as query parameter to URL
+                                    try {
+                                      const url = new URL(apiRequest.url || 'https://example.com');
+                                      url.searchParams.set(apiKeyName, apiKeyValue);
+                                      updateApiUrl(url.toString());
+                                    } catch (e) {
+                                      // If URL is invalid, just skip
+                                    }
+                                  }
+                                }
+                              }}
+                              disabled={!apiKeyName || !apiKeyValue}
+                              className={`h-9 px-4 rounded-md flex items-center justify-center
+                                        ${!apiKeyName || !apiKeyValue
+                                          ? 'bg-accent2/5 text-accent1/50 cursor-not-allowed'
+                                          : 'bg-primary/10 text-primary hover:bg-primary/20'}`}
+                            >
+                              Apply
+                            </button>
+                          </div>
+                        )}
+                        
+                        {/* OAuth 2.0 */}
+                        {authType === 'oauth2' && (
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-sm font-medium text-primary mb-1">Access Token</label>
+                              <div className="relative">
+                                <input
+                                  type="text"
+                                  value={oauthAccessToken}
                                   onChange={(e) => {
-                                    setBearerToken(e.target.value);
+                                    setOauthAccessToken(e.target.value);
                                     if (e.target.value) {
                                       const newHeaders = { ...apiRequest.headers };
                                       newHeaders['Authorization'] = `Bearer ${e.target.value}`;
                                       updateApiHeaders(newHeaders);
                                     }
                                   }}
-                                  placeholder="Enter token"
-                                  className="h-9 w-full rounded-md border border-gray-300 pl-9 pr-3 
-                                          text-sm text-gray-700 focus:outline-none focus:ring-2 
-                                          focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="Enter access token"
+                                  className="h-9 w-full rounded-md border border-accent2/30 pl-9 pr-3 
+                                          text-sm text-primary focus:outline-none focus:ring-1 
+                                          focus:ring-primary focus:border-primary bg-secondary"
                                 />
-                                <Key size={16} className="absolute left-3 top-2.5 text-gray-400" />
+                                <Key size={16} className="absolute left-3 top-2.5 text-accent1" />
                               </div>
-                              <p className="text-xs text-gray-500 mt-1">
-                                Token will be sent as: <span className="font-mono bg-gray-100 px-1">Authorization: Bearer {bearerToken || 'token'}</span>
+                              <p className="text-xs text-accent1 mt-1">
+                                Token will be sent as: <span className="font-mono bg-accent2/10 px-1">Authorization: Bearer {oauthAccessToken || 'token'}</span>
                               </p>
                             </div>
-                          )}
-                          
-                          {/* Basic Auth */}
-                          {authType === 'basicAuth' && (
-                            <div className="space-y-3">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                                <input
-                                  type="text"
-                                  value={basicAuthUsername}
-                                  onChange={(e) => {
-                                    setBasicAuthUsername(e.target.value);
-                                    if (e.target.value) {
-                                      const credentials = btoa(`${e.target.value}:${basicAuthPassword}`);
-                                      const newHeaders = { ...apiRequest.headers };
-                                      newHeaders['Authorization'] = `Basic ${credentials}`;
-                                      updateApiHeaders(newHeaders);
-                                    }
-                                  }}
-                                  placeholder="Username"
-                                  className="h-9 w-full rounded-md border border-gray-300 px-3 
-                                          text-sm text-gray-700 focus:outline-none focus:ring-2 
-                                          focus:ring-blue-500 focus:border-blue-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                                <div className="relative">
-                                  <input
-                                    type="password"
-                                    value={basicAuthPassword}
-                                    onChange={(e) => {
-                                      setBasicAuthPassword(e.target.value);
-                                      if (basicAuthUsername) {
-                                        const credentials = btoa(`${basicAuthUsername}:${e.target.value}`);
-                                        const newHeaders = { ...apiRequest.headers };
-                                        newHeaders['Authorization'] = `Basic ${credentials}`;
-                                        updateApiHeaders(newHeaders);
-                                      }
-                                    }}
-                                    placeholder="Password"
-                                    className="h-9 w-full rounded-md border border-gray-300 pl-9 pr-3 
-                                            text-sm text-gray-700 focus:outline-none focus:ring-2 
-                                            focus:ring-blue-500 focus:border-blue-500"
-                                  />
-                                  <Lock size={16} className="absolute left-3 top-2.5 text-gray-400" />
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* API Key Auth */}
-                          {authType === 'apiKey' && (
-                            <div className="space-y-3">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Key Name</label>
-                                <input
-                                  type="text"
-                                  value={apiKeyName}
-                                  onChange={(e) => setApiKeyName(e.target.value)}
-                                  placeholder="API Key Name (e.g. X-API-Key)"
-                                  className="h-9 w-full rounded-md border border-gray-300 px-3 
-                                          text-sm text-gray-700 focus:outline-none focus:ring-2 
-                                          focus:ring-blue-500 focus:border-blue-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Key Value</label>
-                                <div className="relative">
-                                  <input
-                                    type="text"
-                                    value={apiKeyValue}
-                                    onChange={(e) => setApiKeyValue(e.target.value)}
-                                    placeholder="API Key Value"
-                                    className="h-9 w-full rounded-md border border-gray-300 pl-9 pr-3 
-                                            text-sm text-gray-700 focus:outline-none focus:ring-2 
-                                            focus:ring-blue-500 focus:border-blue-500"
-                                  />
-                                  <Key size={16} className="absolute left-3 top-2.5 text-gray-400" />
-                                </div>
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Add to</label>
-                                <div className="flex gap-4">
-                                  <label className="flex items-center">
-                                    <input 
-                                      type="radio" 
-                                      name="api-key-location"
-                                      checked={apiKeyLocation === 'header'} 
-                                      onChange={() => setApiKeyLocation('header')}
-                                      className="mr-1.5" 
-                                    />
-                                    <span className="text-sm">Header</span>
-                                  </label>
-                                  <label className="flex items-center">
-                                    <input 
-                                      type="radio" 
-                                      name="api-key-location" 
-                                      checked={apiKeyLocation === 'query'}
-                                      onChange={() => setApiKeyLocation('query')}
-                                      className="mr-1.5" 
-                                    />
-                                    <span className="text-sm">Query Param</span>
-                                  </label>
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => {
-                                  if (apiKeyName && apiKeyValue) {
-                                    if (apiKeyLocation === 'header') {
-                                      const newHeaders = { ...apiRequest.headers };
-                                      newHeaders[apiKeyName] = apiKeyValue;
-                                      updateApiHeaders(newHeaders);
-                                    } else {
-                                      // Add as query parameter to URL
-                                      try {
-                                        const url = new URL(apiRequest.url || 'https://example.com');
-                                        url.searchParams.set(apiKeyName, apiKeyValue);
-                                        updateApiUrl(url.toString());
-                                      } catch (e) {
-                                        // If URL is invalid, just skip
-                                      }
-                                    }
-                                  }
-                                }}
-                                disabled={!apiKeyName || !apiKeyValue}
-                                className={`h-9 px-4 rounded-md flex items-center justify-center
-                                          ${!apiKeyName || !apiKeyValue
-                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                            : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
-                              >
-                                Apply
-                              </button>
-                            </div>
-                          )}
-                          
-                          {/* OAuth 2.0 */}
-                          {authType === 'oauth2' && (
-                            <div className="space-y-3">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Access Token</label>
-                                <div className="relative">
-                                  <input
-                                    type="text"
-                                    value={oauthAccessToken}
-                                    onChange={(e) => {
-                                      setOauthAccessToken(e.target.value);
-                                      if (e.target.value) {
-                                        const newHeaders = { ...apiRequest.headers };
-                                        newHeaders['Authorization'] = `Bearer ${e.target.value}`;
-                                        updateApiHeaders(newHeaders);
-                                      }
-                                    }}
-                                    placeholder="Enter access token"
-                                    className="h-9 w-full rounded-md border border-gray-300 pl-9 pr-3 
-                                            text-sm text-gray-700 focus:outline-none focus:ring-2 
-                                            focus:ring-blue-500 focus:border-blue-500"
-                                  />
-                                  <Key size={16} className="absolute left-3 top-2.5 text-gray-400" />
-                                </div>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  Token will be sent as: <span className="font-mono bg-gray-100 px-1">Authorization: Bearer {oauthAccessToken || 'token'}</span>
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </motion.div>
               </div>
               
-              {/* Response section */}
+              {/* Response section styled to match monotone UI */}
               <motion.div 
-                className="border-t border-gray-200 bg-gray-50 p-4"
+                className="border-t border-accent2/30 bg-accent2/5 p-4"
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
               >
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-gray-700">Response</h3>
+                  <h3 className="text-sm font-medium text-primary">Response</h3>
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center">
                       {apiRequest.loading ? (
-                        <svg className="animate-spin mr-2 h-3.5 w-3.5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <svg className="animate-spin mr-2 h-3.5 w-3.5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                       ) : null}
-                      <span className="text-xs font-medium text-gray-600">
+                      <span className="text-xs font-medium text-accent1">
                         Status: {
                           apiRequest.loading ? 
-                            <span className="text-blue-500">Loading...</span> : 
+                            <span className="text-primary">Loading...</span> : 
                             apiRequest.error ? 
-                              <span className="text-red-500">Error</span> :
+                              <span className="text-primary/80">Error</span> :
                               apiRequest.statusCode ? 
                                 <span className={
                                   apiRequest.statusCode >= 200 && apiRequest.statusCode < 300 
-                                    ? "text-green-500" 
+                                    ? "text-primary" 
                                     : apiRequest.statusCode >= 400 
-                                      ? "text-red-500" 
-                                      : "text-yellow-500"
+                                      ? "text-primary/80" 
+                                      : "text-accent1"
                                 }>
                                   {apiRequest.statusCode} {getStatusText(apiRequest.statusCode)}
                                 </span> :
-                                <span className="text-gray-500">Waiting</span>
+                                <span className="text-accent1/80">Waiting</span>
                         }
                       </span>
                     </div>
-                    <span className="text-xs text-gray-600">
+                    <span className="text-xs text-accent1">
                       Time: {responseTime ? `${responseTime}ms` : '--'}
                     </span>
-                    <span className="text-xs text-gray-600">
+                    <span className="text-xs text-accent1">
                       Size: {responseSize ? 
                         responseSize < 1024 ? 
                           `${responseSize}B` : 

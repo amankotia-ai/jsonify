@@ -1,14 +1,66 @@
 import React, { useEffect, useState } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { json } from '@codemirror/lang-json';
-import { yaml as yamlLanguage } from '@codemirror/lang-yaml';
 import { EditorView } from '@codemirror/view';
 import { oneDark } from '@codemirror/theme-one-dark';
-import yaml from 'js-yaml';
 import { useEditorStore } from '../../store/editorStore';
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { Tag, tags } from '@lezer/highlight';
+
+// Create custom syntax highlighting for our monotone theme
+const monotoneHighlightStyle = HighlightStyle.define([
+  { tag: [tags.comment], color: '#879AF8' },
+  { tag: [tags.variableName], color: '#364CD5' },
+  { tag: [tags.definition], color: '#364CD5', fontWeight: 'bold' },
+  { tag: [tags.punctuation], color: '#5067F5' },
+  { tag: [tags.propertyName], color: '#5067F5' },
+  { tag: [tags.number], color: '#5067F5' },
+  { tag: [tags.string], color: '#364CD5' },
+  { tag: [tags.keyword], color: '#5067F5', fontWeight: 'bold' },
+  { tag: [tags.operator], color: '#5067F5' },
+  { tag: [tags.bracket], color: '#879AF8' },
+  { tag: [tags.invalid], color: '#FF0000' },
+]);
+
+// Light theme styles
+const monotoneTheme = EditorView.theme({
+  '&': {
+    backgroundColor: '#F4F6FF',
+    color: '#364CD5',
+  },
+  '.cm-content': {
+    caretColor: '#364CD5',
+  },
+  '.cm-cursor': {
+    borderLeftColor: '#364CD5',
+  },
+  '&.cm-focused .cm-cursor': {
+    borderLeftColor: '#364CD5',
+  },
+  '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': {
+    backgroundColor: '#879AF850',
+  },
+  '.cm-gutters': {
+    backgroundColor: '#F4F6FF',
+    color: '#5067F5',
+    border: 'none',
+  },
+  '.cm-activeLineGutter': {
+    backgroundColor: '#879AF815',
+  },
+  '.cm-activeLine': {
+    backgroundColor: '#879AF810',
+  },
+  '.cm-selectionMatch': {
+    backgroundColor: '#879AF830',
+  },
+});
+
+// Combine theme with syntax highlighting
+const monotoneCodeTheme = [monotoneTheme, syntaxHighlighting(monotoneHighlightStyle)];
 
 export const CodeEditor: React.FC = () => {
-  const { rawData, selectedFormat, updateRawData } = useEditorStore();
+  const { rawData, updateRawData } = useEditorStore();
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
@@ -33,12 +85,7 @@ export const CodeEditor: React.FC = () => {
     }
 
     try {
-      if (selectedFormat === 'json') {
-        JSON.parse(rawData);
-      } else {
-        // YAML validation
-        yaml.load(rawData);
-      }
+      JSON.parse(rawData);
       setValidationError(null);
     } catch (error) {
       if (error instanceof Error) {
@@ -47,7 +94,7 @@ export const CodeEditor: React.FC = () => {
         setValidationError('Invalid format');
       }
     }
-  }, [rawData, selectedFormat]);
+  }, [rawData]);
 
   const handleChange = React.useCallback((value: string) => {
     updateRawData(value);
@@ -58,20 +105,20 @@ export const CodeEditor: React.FC = () => {
       <div className="flex-1 relative overflow-hidden">
         {!rawData.trim() && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="text-gray-400 text-sm">
-              Enter your {selectedFormat.toUpperCase()} data here...
+            <span className="text-accent1 text-sm">
+              Enter your JSON data here...
             </span>
           </div>
         )}
         <CodeMirror
           value={rawData}
           height="100%"
-          theme={isDarkMode ? 'dark' : 'light'}
+          theme={isDarkMode ? "dark" : "light"}
           onChange={handleChange}
           extensions={[
-            selectedFormat === 'json' ? json() : yamlLanguage(),
+            json(),
             EditorView.lineWrapping,
-            ...(isDarkMode ? [oneDark] : []),
+            ...(isDarkMode ? [oneDark] : monotoneCodeTheme),
           ]}
           basicSetup={{
             foldGutter: true,
@@ -87,7 +134,7 @@ export const CodeEditor: React.FC = () => {
       </div>
       
       {validationError && (
-        <div className="p-3 bg-red-50 border-t border-red-300 text-red-700 text-sm font-medium shadow-sm z-10 sticky bottom-0">
+        <div className="p-3 bg-primary/5 border-t border-primary/20 text-primary text-sm font-medium shadow-sm z-10 sticky bottom-0">
           <p className="leading-tight">Error: {validationError}</p>
         </div>
       )}

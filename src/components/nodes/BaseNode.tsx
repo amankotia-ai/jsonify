@@ -1,7 +1,6 @@
 import React from 'react';
 import { Handle, Position } from 'reactflow';
 import { DataNodeProps } from './NodeTypes';
-import { COLORS } from '../../utils/layout/constants';
 
 export const BaseNode: React.FC<DataNodeProps> = ({ data }) => {
   return (
@@ -9,16 +8,16 @@ export const BaseNode: React.FC<DataNodeProps> = ({ data }) => {
       <Handle
         type="target"
         position={Position.Top}
-        className="w-2 h-2 !bg-gray-500"
+        className="w-2 h-2 !bg-primary/70"
       />
       
-      <div className="bg-gray-800 rounded-lg p-4 shadow-lg border border-gray-700 min-w-[280px]">
+      <div className="bg-[#F4F6FF] rounded-lg p-4 shadow-sm border border-accent2/30 min-w-[280px]">
         {data.key && (
-          <div className="text-gray-300 font-medium mb-2">{data.key}</div>
+          <div className="text-primary font-medium mb-2">{data.key}</div>
         )}
-        <div className="text-gray-400">
+        <div className="text-accent1">
           {data.type === 'value' ? (
-            <span className="text-blue-400">{JSON.stringify(data.value)}</span>
+            <span className="text-primary">{JSON.stringify(data.value)}</span>
           ) : (
             <span>{data.type === 'array' ? '[]' : '{}'}</span>
           )}
@@ -28,7 +27,7 @@ export const BaseNode: React.FC<DataNodeProps> = ({ data }) => {
       <Handle
         type="source"
         position={Position.Bottom}
-        className="w-2 h-2 !bg-gray-500"
+        className="w-2 h-2 !bg-primary/70"
       />
     </div>
   );

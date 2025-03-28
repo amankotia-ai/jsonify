@@ -6,6 +6,12 @@ export default {
   ],
   theme: {
     extend: {
+      colors: {
+        primary: '#364CD5',
+        secondary: '#FFFBF5',
+        accent1: '#5067F5',
+        accent2: '#879AF8',
+      },
       animation: {
         fadeIn: 'fadeIn 0.2s ease-in-out',
       },

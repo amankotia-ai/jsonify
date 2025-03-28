@@ -1,4 +1,3 @@
-import yaml from 'js-yaml';
 import { DataNode } from '../types';
 
 const getPropertyType = (value: any): 'string' | 'number' | 'boolean' | 'null' | 'object' | 'array' => {
@@ -14,11 +13,11 @@ const createProperty = (key: string, value: any) => ({
   type: getPropertyType(value),
 });
 
-export const parseData = (data: string, format: 'json' | 'yaml'): DataNode[] => {
+export const parseData = (data: string, format: 'json'): DataNode[] => {
   if (!data.trim()) return [];
   
   try {
-    const parsed = format === 'json' ? JSON.parse(data) : yaml.load(data);
+    const parsed = JSON.parse(data);
     return convertToNodes(parsed);
   } catch (error) {
     console.error('Failed to parse data:', error);

@@ -108,7 +108,7 @@ export const FlowControls: React.FC<FlowControlsProps> = ({
     setSpacePressed(!isPanning);
   }, [setSpacePressed, isPanning]);
 
-  const controlButton = "bg-white border border-gray-200 rounded-md p-1.5 hover:bg-gray-50 transition-colors text-gray-600 hover:text-gray-800 z-50";
+  const controlButton = "bg-secondary border border-accent2 rounded-md p-1.5 hover:bg-accent2/10 transition-colors text-accent1 hover:text-primary z-50";
 
   return (
     <>
@@ -118,10 +118,10 @@ export const FlowControls: React.FC<FlowControlsProps> = ({
         variant={BackgroundVariant.Dots}
         gap={20}
         size={2}
-        style={{ backgroundColor: '#F7F7F7' }}
+        style={{ backgroundColor: '#FFFBF5' }}
       />
       <Background
-        color="#e5e7eb"
+        color="#879AF8"
         variant={BackgroundVariant.Lines}
         gap={100}
         size={0.5}
@@ -137,12 +137,12 @@ export const FlowControls: React.FC<FlowControlsProps> = ({
       >
         <motion.button
           onClick={openApiPanel}
-          className="bg-white border border-gray-200 rounded-md p-2 hover:bg-gray-50 transition-colors text-gray-600 hover:text-gray-800 shadow-sm flex items-center gap-1.5"
+          className="bg-secondary border border-accent2 rounded-md p-2 hover:bg-accent2/10 transition-colors text-accent1 hover:text-primary shadow-sm flex items-center gap-1.5"
           title="API Request"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          <Globe size={16} className="text-gray-700" />
+          <Globe size={16} className="text-primary" />
           <span className="text-xs font-medium">API</span>
         </motion.button>
       </motion.div>
@@ -156,7 +156,7 @@ export const FlowControls: React.FC<FlowControlsProps> = ({
       >
         <motion.button
           onClick={togglePanMode}
-          className={`${controlButton} ${isPanning ? 'bg-blue-50 border-blue-200 text-blue-600' : ''}`}
+          className={`${controlButton} ${isPanning ? 'bg-primary/10 border-primary text-primary' : ''}`}
           title="Toggle Pan Mode (Spacebar)"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}

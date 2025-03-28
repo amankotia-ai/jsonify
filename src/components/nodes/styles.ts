@@ -1,4 +1,4 @@
-import { COLORS, SPACING } from '../../utils/layout/constants';
+import { SPACING } from '../../utils/layout/constants';
 
 export const nodeStyles = {
   base: `
@@ -8,36 +8,35 @@ export const nodeStyles = {
   `,
   root: {
     wrapper: `
-      bg-${COLORS.ROOT.BG}
-      border-${COLORS.ROOT.BORDER}
+      bg-[#F4F6FF]
+      border-accent2/30
       p-${SPACING.NODE_PADDING}px
     `,
     item: `
       flex items-center justify-between
       py-1 px-2 rounded
-      hover:bg-gray-100
+      hover:bg-primary/5
     `,
-    count: 'text-gray-500 text-sm',
+    count: 'text-accent1 text-sm',
   },
   object: {
     wrapper: (isArray: boolean) => `
-      ${isArray ? `bg-${COLORS.ARRAY.BG} border-${COLORS.ARRAY.BORDER}` 
-                : `bg-${COLORS.OBJECT.BG} border-${COLORS.OBJECT.BORDER}`}
+      bg-[#F4F6FF] border-accent2/30
       p-${SPACING.NODE_PADDING}px
     `,
     header: 'flex items-center gap-2 mb-2',
     title: (isArray: boolean) => `
       font-medium
-      ${isArray ? `text-${COLORS.ARRAY.TITLE}` : `text-${COLORS.OBJECT.TITLE}`}
+      text-primary
     `,
   },
   property: {
     wrapper: 'py-1',
-    key: `text-${COLORS.PROPERTY.KEY} font-medium`,
-    value: `text-${COLORS.PROPERTY.VALUE}`,
+    key: 'text-primary font-medium',
+    value: 'text-accent1',
   },
   handle: {
-    base: 'w-2 h-2 bg-gray-400 rounded-full',
+    base: 'w-2 h-2 bg-primary/70 rounded-full',
     left: '-left-1',
     right: '-right-1',
   },
@@ -45,7 +44,7 @@ export const nodeStyles = {
 
 export const edgeStyles = {
   path: {
-    stroke: COLORS.EDGE.LINE,
+    stroke: '#879AF8',
     strokeWidth: 1.5,
     strokeDasharray: '5,5',
   },

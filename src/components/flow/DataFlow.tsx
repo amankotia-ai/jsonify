@@ -171,6 +171,9 @@ const Flow: React.FC<FlowProps> = ({ openApiPanel }) => {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
+      <div className="absolute inset-0 opacity-5 pointer-events-none z-0 flex items-center justify-center">
+        <img src="/Web Banner.png" alt="JSON Map" className="w-96 max-w-full" />
+      </div>
       <ReactFlow
         nodes={customNodeAnimation}
         edges={flowEdges}
@@ -178,7 +181,7 @@ const Flow: React.FC<FlowProps> = ({ openApiPanel }) => {
         connectionMode={ConnectionMode.Loose}
         defaultEdgeOptions={{
           type: 'smoothstep',
-          style: { stroke: '#94a3b8', strokeWidth: 1.5 },
+          style: { stroke: '#879AF8', strokeWidth: 1.5 },
           animated: true, // Add animation to edges
         }}
         minZoom={0.1}
@@ -186,7 +189,7 @@ const Flow: React.FC<FlowProps> = ({ openApiPanel }) => {
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={false}
-        className="bg-gray-100"
+        className="bg-secondary"
         proOptions={{ hideAttribution: true }}
         fitView={false} // Disable default fitView to use our custom one
         onInit={onInit}

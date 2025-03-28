@@ -11,7 +11,7 @@ function App() {
 
   return (
     <motion.div 
-      className="h-screen relative bg-gray-100"
+      className="h-screen relative bg-secondary"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
@@ -29,7 +29,7 @@ function App() {
       {/* Mobile toggle button */}
       <motion.button
         onClick={() => setIsEditorOpen(!isEditorOpen)}
-        className="md:hidden fixed top-4 left-4 z-[60] bg-white p-2 rounded-md border border-gray-200 shadow-sm"
+        className="md:hidden fixed top-4 left-4 z-[60] bg-secondary p-2 rounded-md border border-accent2 shadow-sm text-primary"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
@@ -39,7 +39,7 @@ function App() {
       {/* Floating editor panel */}
       <AnimatePresence>
         <motion.div 
-          className="fixed top-1.5 bottom-1.5 left-1.5 w-[400px] rounded-md bg-white border border-gray-200 z-50 overflow-hidden max-w-[calc(100%-12px)] md:max-w-[400px]"
+          className="fixed top-1.5 bottom-1.5 left-1.5 w-[400px] rounded-md bg-secondary border border-gray-200 shadow-sm z-50 overflow-hidden max-w-[calc(100%-12px)] md:max-w-[400px)]"
           initial={{ opacity: 0, x: '-100%' }}
           animate={{ 
             opacity: 1,
