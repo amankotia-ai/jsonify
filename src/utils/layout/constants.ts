@@ -1,10 +1,16 @@
 export const SPACING = {
-  VERTICAL: 180,      // Reduced vertical spacing between nodes
-  HORIZONTAL: 380,    // Reduced horizontal spacing
+  VERTICAL: 160,      // Increased vertical spacing between nodes
+  HORIZONTAL: 600,    // Increased horizontal spacing for wider multi-column nodes
   NODE_PADDING: 16,   // Internal node padding
-  NODE_WIDTH: 320,    // Fixed node width
+  NODE_WIDTH: 320,    // Base node width (single column)
+  MULTI_COLUMN_WIDTH: {
+    TWO_COLUMNS: 600, // Width for two-column nodes
+    THREE_COLUMNS: 880, // Width for three-column nodes
+  },
   LEVEL_INDENT: 100,  // Indentation for nested levels
-  MIN_NODE_HEIGHT: 100, // Minimum height for a node
+  MIN_NODE_HEIGHT: 80, // Reduced minimum height for a node
+  VERTICAL_GAP: 60,   // Increased gap between sibling nodes
+  NODE_MARGIN: 30,    // Increased margin around nodes
 } as const;
 
 export const COLORS = {

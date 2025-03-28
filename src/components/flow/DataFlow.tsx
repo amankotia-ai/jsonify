@@ -1,11 +1,13 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import ReactFlow, { 
   ReactFlowProvider, 
   Node, 
   Edge, 
   ConnectionMode,
   useReactFlow,
+  Panel,
 } from 'reactflow';
+import { motion, AnimatePresence } from 'framer-motion';
 import 'reactflow/dist/style.css';
 import { useEditorStore } from '../../store/editorStore';
 import { FlowControls } from './FlowControls';
@@ -13,9 +15,16 @@ import { nodeTypes } from './FlowConfig';
 import { calculateNodePositions } from '../../utils/layout/positioning';
 import { createEdges } from '../../utils/layout/edges';
 
-const Flow: React.FC = () => {
+interface FlowProps {
+  openApiPanel: () => void;
+}
+
+const Flow: React.FC<FlowProps> = ({ openApiPanel }) => {
   const nodes = useEditorStore((state) => state.nodes);
   const reactFlowInstance = useReactFlow();
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const [isPanning, setIsPanning] = useState(false);
+  const [spacePressed, setSpacePressed] = useState(false);
   
   const { flowNodes, flowEdges } = React.useMemo(() => {
     const positions = calculateNodePositions(nodes);
@@ -70,17 +79,107 @@ const Flow: React.FC = () => {
       );
     }
   }, [flowNodes.length, reactFlowInstance]);
+  
+  // Handle keyboard events for spacebar panning
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Space key (32) - used for panning
+      if (e.code === 'Space' && !spacePressed) {
+        setSpacePressed(true);
+        document.body.style.cursor = 'grab';
+      }
+    };
+    
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        setSpacePressed(false);
+        setIsPanning(false);
+        document.body.style.cursor = 'default';
+      }
+    };
+    
+    // Only add event listeners if reactFlowWrapper is available
+    if (reactFlowWrapper.current) {
+      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keyup', handleKeyUp);
+    }
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      document.body.style.cursor = 'default';
+    };
+  }, [spacePressed, reactFlowWrapper]);
+  
+  // Handle mouse events for spacebar+drag panning
+  useEffect(() => {
+    const handleMouseDown = () => {
+      if (spacePressed) {
+        setIsPanning(true);
+        document.body.style.cursor = 'grabbing';
+      }
+    };
+    
+    const handleMouseUp = () => {
+      if (spacePressed) {
+        setIsPanning(false);
+        document.body.style.cursor = 'grab';
+      }
+    };
+    
+    if (reactFlowWrapper.current) {
+      window.addEventListener('mousedown', handleMouseDown);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    
+    return () => {
+      window.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [spacePressed, reactFlowWrapper]);
+  
+  const onInit = (instance: any) => {
+    // Enable zooming with mouse wheel
+    if (reactFlowWrapper.current) {
+      reactFlowWrapper.current.addEventListener('wheel', (event) => {
+        // Prevent default behavior only if not pressing spacebar
+        // This allows normal scrolling when space is not pressed
+        if (!spacePressed) {
+          event.preventDefault();
+        }
+      }, { passive: false });
+    }
+  };
+
+  // Custom animation for nodes
+  const customNodeAnimation = React.useMemo(() => {
+    return flowNodes.map((node, index) => ({
+      ...node,
+      // Add animation data to each node
+      data: {
+        ...node.data,
+        animationDelay: index * 0.05, // Stagger the animations
+      }
+    }));
+  }, [flowNodes]);
 
   return (
-    <div className="h-full w-full relative">
+    <motion.div 
+      className="h-full w-full relative" 
+      ref={reactFlowWrapper}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
       <ReactFlow
-        nodes={flowNodes}
+        nodes={customNodeAnimation}
         edges={flowEdges}
         nodeTypes={nodeTypes}
         connectionMode={ConnectionMode.Loose}
         defaultEdgeOptions={{
           type: 'smoothstep',
           style: { stroke: '#94a3b8', strokeWidth: 1.5 },
+          animated: true, // Add animation to edges
         }}
         minZoom={0.1}
         maxZoom={2}
@@ -90,16 +189,30 @@ const Flow: React.FC = () => {
         className="bg-gray-100"
         proOptions={{ hideAttribution: true }}
         fitView={false} // Disable default fitView to use our custom one
+        onInit={onInit}
+        panOnScroll={true}
+        zoomOnScroll={true}
+        panOnDrag={spacePressed} // Enable panning when space is pressed
+        selectionOnDrag={false}
+        panActivationKeyCode="Space"
       >
-        <FlowControls />
+        <FlowControls 
+          isPanning={isPanning} 
+          setSpacePressed={setSpacePressed}
+          openApiPanel={openApiPanel}
+        />
       </ReactFlow>
-    </div>
+    </motion.div>
   );
 };
 
 // Wrap the Flow component with ReactFlowProvider
-export const DataFlow: React.FC = () => (
+interface DataFlowProps {
+  openApiPanel: () => void;
+}
+
+export const DataFlow: React.FC<DataFlowProps> = ({ openApiPanel }) => (
   <ReactFlowProvider>
-    <Flow />
+    <Flow openApiPanel={openApiPanel} />
   </ReactFlowProvider>
 );
