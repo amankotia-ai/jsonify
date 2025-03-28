@@ -1,8 +1,8 @@
-# JSON Canvas
+# JSON Map
 
 A modern JSON visualization tool with an elegant monotone interface that transforms structured data into interactive node diagrams and includes a powerful API testing interface.
 
-![JSON Canvas Screenshot](https://i.ibb.co/gLy0GTRP/JSONcanvas.png)
+![JSON Map Screenshot](https://i.ibb.co/gLy0GTRP/JSONcanvas.png)
 
 ## Features
 
@@ -20,7 +20,7 @@ A modern JSON visualization tool with an elegant monotone interface that transfo
 
 ## Color Palette
 
-JSON Canvas uses a carefully selected monotone color palette:
+JSON Map uses a carefully selected monotone color palette:
 
 - Primary: `#364CD5` - Primary accent color for important elements
 - Secondary: `#FFFBF5` - Background color for a clean, distraction-free experience
@@ -86,7 +86,7 @@ npm run dev
 
 ## Design Principles
 
-JSON Canvas follows these design principles:
+JSON Map follows these design principles:
 
 - **Minimalism:** Clean interface that focuses attention on your data
 - **Coherence:** Consistent monotone color scheme across all elements
