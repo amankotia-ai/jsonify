@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Plus, Trash2, ChevronDown, ChevronUp, Clipboard, CheckCircle, AlertCircle, Download, Upload, Settings, Code, X, Globe, Key, Lock } from 'lucide-react';
+import { Send, Plus, Trash2, ChevronDown, ChevronUp, Clipboard, CheckCircle, AlertCircle, Download, Upload, Settings, Code, X, Globe, Key, Lock, ArrowUpFromLine } from 'lucide-react';
+import { parseCurlCommand } from '../../utils/curlParser';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEditorStore } from '../../store/editorStore';
 import { RequestMethod } from '../../types';
@@ -36,21 +37,21 @@ const exampleApiCalls = [
   }
 ];
 
-export const ApiPanel: React.FC<ApiPanelProps> = ({ 
-  isOpen = false, 
+export const ApiPanel: React.FC<ApiPanelProps> = ({
+  isOpen = false,
   onClose,
-  showFloatingButton = false 
+  showFloatingButton = false
 }) => {
-  const { 
-    apiRequest, 
-    updateApiUrl, 
-    updateApiMethod, 
+  const {
+    apiRequest,
+    updateApiUrl,
+    updateApiMethod,
     updateApiHeaders,
     updateApiBody,
     sendApiRequest,
     importApiRequest
   } = useEditorStore();
-  
+
   const [showHeaders, setShowHeaders] = useState(false);
   const [showBody, setShowBody] = useState(false);
   const [newHeaderKey, setNewHeaderKey] = useState('');
@@ -60,7 +61,7 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [authType, setAuthType] = useState<AuthType>('noAuth');
-  
+
   // Auth related state
   const [bearerToken, setBearerToken] = useState('');
   const [basicAuthUsername, setBasicAuthUsername] = useState('');
@@ -69,24 +70,27 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
   const [apiKeyValue, setApiKeyValue] = useState('');
   const [apiKeyLocation, setApiKeyLocation] = useState<'header' | 'query'>('header');
   const [oauthAccessToken, setOauthAccessToken] = useState('');
-  
+
   // Add state for response metrics
   const [responseTime, setResponseTime] = useState<number | null>(null);
   const [responseSize, setResponseSize] = useState<number | null>(null);
-  
+
+  // Curl import
+  const [curlCommand, setCurlCommand] = useState('');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Get HTTP status text from status code
   const getStatusText = (statusCode: number | undefined): string => {
     if (!statusCode) return '';
-    
+
     switch (statusCode) {
       // 1xx Informational
       case 100: return 'Continue';
       case 101: return 'Switching Protocols';
       case 102: return 'Processing';
       case 103: return 'Early Hints';
-      
+
       // 2xx Success
       case 200: return 'OK';
       case 201: return 'Created';
@@ -95,7 +99,7 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
       case 204: return 'No Content';
       case 205: return 'Reset Content';
       case 206: return 'Partial Content';
-      
+
       // 3xx Redirection
       case 300: return 'Multiple Choices';
       case 301: return 'Moved Permanently';
@@ -104,7 +108,7 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
       case 304: return 'Not Modified';
       case 307: return 'Temporary Redirect';
       case 308: return 'Permanent Redirect';
-      
+
       // 4xx Client Errors
       case 400: return 'Bad Request';
       case 401: return 'Unauthorized';
@@ -126,7 +130,7 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
       case 417: return 'Expectation Failed';
       case 418: return 'I\'m a teapot';
       case 429: return 'Too Many Requests';
-      
+
       // 5xx Server Errors
       case 500: return 'Internal Server Error';
       case 501: return 'Not Implemented';
@@ -134,7 +138,7 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
       case 503: return 'Service Unavailable';
       case 504: return 'Gateway Timeout';
       case 505: return 'HTTP Version Not Supported';
-      
+
       default: return '';
     }
   };
@@ -145,7 +149,7 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
       // Close the modal after a small delay to show the success response
       const timer = setTimeout(() => {
         handleClose();
-        
+
         // Trigger fitView on the ReactFlow canvas to show nodes
         // Find the ReactFlow container and dispatch a custom event
         const flowContainer = document.querySelector('.react-flow');
@@ -154,7 +158,7 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
           flowContainer.dispatchEvent(customEvent);
         }
       }, 1000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [apiRequest.response, apiRequest.loading, apiRequest.error]);
@@ -162,15 +166,15 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
   const handleMethodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     updateApiMethod(e.target.value as RequestMethod);
   };
-  
+
   const addHeader = () => {
     if (!newHeaderKey.trim()) return;
-    
+
     const newHeaders = {
       ...apiRequest.headers,
       [newHeaderKey]: newHeaderValue
     };
-    
+
     updateApiHeaders(newHeaders);
     setNewHeaderKey('');
     setNewHeaderValue('');
@@ -181,7 +185,7 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
       addHeader();
     }
   };
-  
+
   const removeHeader = (key: string) => {
     const newHeaders = { ...apiRequest.headers };
     delete newHeaders[key];
@@ -192,12 +196,12 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
     // Reset metrics
     setResponseTime(null);
     setResponseSize(null);
-    
+
     const startTime = Date.now();
     await sendApiRequest();
     const endTime = Date.now();
     setResponseTime(endTime - startTime);
-    
+
     // Calculate response size if we have a response
     if (apiRequest.response) {
       const responseStr = JSON.stringify(apiRequest.response);
@@ -246,23 +250,23 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
       // Ignore formatting errors
     }
   };
-  
+
   const handleImportClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
-  
+
   const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const content = event.target?.result as string;
         const data = JSON.parse(content);
-        
+
         if (importApiRequest) {
           importApiRequest(data);
           setImportError(null);
@@ -273,22 +277,22 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
       }
     };
     reader.readAsText(file);
-    
+
     // Reset the input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
-  
+
   // Update auth headers based on auth type
   const updateAuthorizationHeaders = (type: AuthType) => {
     setAuthType(type);
-    
+
     // Reset all auth headers first
     const newHeaders = { ...apiRequest.headers };
     delete newHeaders['Authorization'];
     delete newHeaders[apiKeyName];
-    
+
     // Set appropriate auth headers based on type
     switch (type) {
       case 'bearerToken':
@@ -316,21 +320,21 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
         }
         break;
     }
-    
+
     updateApiHeaders(newHeaders);
   };
 
   return (
     <>
       {/* Import file input (hidden) */}
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        style={{ display: 'none' }} 
+      <input
+        type="file"
+        ref={fileInputRef}
+        style={{ display: 'none' }}
         accept=".json"
         onChange={handleFileImport}
       />
-    
+
       {/* Floating toggle button */}
       {showFloatingButton && !shouldShowPanel && (
         <motion.button
@@ -345,7 +349,7 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
           <Globe size={24} />
         </motion.button>
       )}
-      
+
       {/* Main API Panel */}
       <AnimatePresence>
         {shouldShowPanel && (
@@ -369,22 +373,22 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                   <Globe className="text-primary" size={20} />
                   <h2 className="text-lg font-medium text-primary">API Request</h2>
                 </div>
-                <button 
+                <button
                   onClick={handleClose}
                   className="text-accent1 hover:text-primary rounded-full p-1 transition-colors"
                 >
                   <X size={20} />
                 </button>
               </div>
-              
+
               {/* Body */}
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
                 {/* URL Bar */}
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
                     <div className="flex-shrink-0 w-28">
-                      <select 
-                        value={apiRequest.method} 
+                      <select
+                        value={apiRequest.method}
                         onChange={handleMethodChange}
                         className="bg-[#F4F6FF] text-primary text-sm font-medium rounded px-2 py-2 pr-8 border border-accent2/30 focus:outline-none focus:ring-1 focus:ring-primary appearance-none h-[42px] w-full"
                         style={{ backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23364CD5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`, backgroundPosition: 'right 8px center', backgroundSize: '16px', backgroundRepeat: 'no-repeat' }}
@@ -394,17 +398,17 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                         ))}
                       </select>
                     </div>
-                    
+
                     <div className="flex-1 relative group">
-                      <input 
-                        type="text" 
-                        value={apiRequest.url} 
+                      <input
+                        type="text"
+                        value={apiRequest.url}
                         onChange={(e) => updateApiUrl(e.target.value)}
                         placeholder="Enter API URL e.g. https://api.example.com/data"
                         className="w-full h-[42px] py-2 px-3 border border-accent2/30 rounded focus:outline-none focus:ring-1 focus:ring-primary text-sm bg-secondary"
                       />
-                      
-                      <button 
+
+                      <button
                         onClick={copyUrlToClipboard}
                         className="absolute right-2 top-1/2 transform -translate-y-1/2 text-accent1 hover:text-primary transition-colors"
                         title="Copy URL"
@@ -412,15 +416,14 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                         {copySuccess ? <CheckCircle size={16} /> : <Clipboard size={16} />}
                       </button>
                     </div>
-                    
+
                     <button
                       onClick={handleSendRequest}
                       disabled={apiRequest.loading || !apiRequest.url.trim()}
-                      className={`h-[42px] px-4 rounded font-medium text-sm flex items-center justify-center transition-colors ${
-                        apiRequest.loading || !apiRequest.url.trim() 
-                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-                          : 'bg-primary text-white hover:bg-primary/90'
-                      }`}
+                      className={`h-[42px] px-4 rounded font-medium text-sm flex items-center justify-center transition-colors ${apiRequest.loading || !apiRequest.url.trim()
+                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        : 'bg-primary text-white hover:bg-primary/90'
+                        }`}
                     >
                       {apiRequest.loading ? (
                         <div className="animate-spin h-4 w-4 border-2 border-white/30 border-t-white rounded-full mr-1" />
@@ -430,14 +433,14 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                       {apiRequest.loading ? 'Sending...' : 'Send'}
                     </button>
                   </div>
-                  
+
                   {/* Removed URL suggestions/example buttons */}
                 </div>
 
                 {/* Error Message */}
                 <AnimatePresence>
                   {apiRequest.error && (
-                    <motion.div 
+                    <motion.div
                       className="flex items-start p-3 bg-primary/5 rounded-md border border-primary/20 text-primary text-sm"
                       initial={{ opacity: 0, y: -10, height: 0 }}
                       animate={{ opacity: 1, y: 0, height: "auto" }}
@@ -452,9 +455,9 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                     </motion.div>
                   )}
                 </AnimatePresence>
-                
+
                 {/* Request options tabs - fixed height container */}
-                <motion.div 
+                <motion.div
                   className="border border-accent2/30 rounded-md overflow-hidden"
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -462,13 +465,13 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                 >
                   <div className="bg-accent2/5 border-b border-accent2/30">
                     <div className="flex">
-                      {['params', 'authorization', 'headers', 'body', 'examples'].map((tab) => (
+                      {['params', 'authorization', 'headers', 'body', 'import', 'examples'].map((tab) => (
                         <button
                           key={tab}
                           className={`
                             px-4 py-2 text-sm font-medium relative
-                            ${activeTab === tab 
-                              ? 'text-primary' 
+                            ${activeTab === tab
+                              ? 'text-primary'
                               : 'text-accent1 hover:text-primary hover:bg-accent2/10'}
                           `}
                           onClick={() => setActiveTab(tab)}
@@ -481,7 +484,7 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                       ))}
                     </div>
                   </div>
-                  
+
                   {/* Fixed height content area */}
                   <div className="p-4 overflow-y-auto" style={{ height: '300px' }}>
                     {activeTab === 'headers' && (
@@ -522,7 +525,7 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                         ) : (
                           <div className="py-2 text-sm text-accent1 italic">No headers added yet</div>
                         )}
-                        
+
                         {/* Add New Header */}
                         <div className="flex items-center gap-2 pt-2 border-t border-accent2/10">
                           <input
@@ -549,9 +552,9 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                             onClick={addHeader}
                             disabled={!newHeaderKey.trim()}
                             className={`h-9 px-3 rounded-md flex items-center justify-center
-                                      ${!newHeaderKey.trim() 
-                                        ? 'bg-accent2/5 text-accent1/50 cursor-not-allowed'
-                                        : 'bg-primary/10 text-primary hover:bg-primary/20'}`}
+                                      ${!newHeaderKey.trim()
+                                ? 'bg-accent2/5 text-accent1/50 cursor-not-allowed'
+                                : 'bg-primary/10 text-primary hover:bg-primary/20'}`}
                           >
                             <Plus size={16} className="mr-1" />
                             Add
@@ -559,7 +562,7 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                         </div>
                       </div>
                     )}
-                    
+
                     {activeTab === 'body' && (
                       <div>
                         <div className="mb-2 flex items-center space-x-2">
@@ -576,7 +579,7 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                             <span className="text-sm font-medium text-primary">x-www-form-urlencoded</span>
                           </label>
                         </div>
-                        
+
                         <textarea
                           value={apiRequest.body}
                           onChange={(e) => updateApiBody(e.target.value)}
@@ -595,7 +598,7 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                         </div>
                       </div>
                     )}
-                    
+
                     {activeTab === 'params' && (
                       <div className="py-2 text-sm">
                         <p className="text-accent1 mb-2">Add query parameters to the URL:</p>
@@ -629,13 +632,15 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                         </div>
                       </div>
                     )}
-                    
+
+
+
                     {activeTab === 'examples' && (
                       <div className="py-2 text-sm">
                         <h3 className="text-sm font-medium text-primary mb-2">Example API calls</h3>
                         <div className="space-y-2">
                           {exampleApiCalls.map((example, index) => (
-                            <div 
+                            <div
                               key={index}
                               className="p-2 border border-accent2/30 rounded-md hover:bg-accent2/10 cursor-pointer"
                               onClick={() => updateApiUrl(example.url)}
@@ -648,12 +653,12 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                         </div>
                       </div>
                     )}
-                    
+
                     {activeTab === 'authorization' && (
                       <div className="py-2 text-sm space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-primary mb-1">Type</label>
-                          <select 
+                          <select
                             className="w-full h-9 rounded-md border border-accent2/30 px-3 text-sm text-primary 
                                       focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-secondary"
                             value={authType}
@@ -666,7 +671,7 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                             <option value="oauth2">OAuth 2.0</option>
                           </select>
                         </div>
-                        
+
                         {/* Bearer Token Auth */}
                         {authType === 'bearerToken' && (
                           <div className="space-y-2">
@@ -695,7 +700,7 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                             </p>
                           </div>
                         )}
-                        
+
                         {/* Basic Auth */}
                         {authType === 'basicAuth' && (
                           <div className="space-y-3">
@@ -744,7 +749,7 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                             </div>
                           </div>
                         )}
-                        
+
                         {/* API Key Auth */}
                         {authType === 'apiKey' && (
                           <div className="space-y-3">
@@ -779,22 +784,22 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                               <label className="block text-sm font-medium text-primary mb-1">Add to</label>
                               <div className="flex gap-4">
                                 <label className="flex items-center">
-                                  <input 
-                                    type="radio" 
+                                  <input
+                                    type="radio"
                                     name="api-key-location"
-                                    checked={apiKeyLocation === 'header'} 
+                                    checked={apiKeyLocation === 'header'}
                                     onChange={() => setApiKeyLocation('header')}
-                                    className="mr-1.5 text-primary" 
+                                    className="mr-1.5 text-primary"
                                   />
                                   <span className="text-sm text-primary">Header</span>
                                 </label>
                                 <label className="flex items-center">
-                                  <input 
-                                    type="radio" 
-                                    name="api-key-location" 
+                                  <input
+                                    type="radio"
+                                    name="api-key-location"
                                     checked={apiKeyLocation === 'query'}
                                     onChange={() => setApiKeyLocation('query')}
-                                    className="mr-1.5 text-primary" 
+                                    className="mr-1.5 text-primary"
                                   />
                                   <span className="text-sm text-primary">Query Param</span>
                                 </label>
@@ -822,14 +827,14 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                               disabled={!apiKeyName || !apiKeyValue}
                               className={`h-9 px-4 rounded-md flex items-center justify-center
                                         ${!apiKeyName || !apiKeyValue
-                                          ? 'bg-accent2/5 text-accent1/50 cursor-not-allowed'
-                                          : 'bg-primary/10 text-primary hover:bg-primary/20'}`}
+                                  ? 'bg-accent2/5 text-accent1/50 cursor-not-allowed'
+                                  : 'bg-primary/10 text-primary hover:bg-primary/20'}`}
                             >
                               Apply
                             </button>
                           </div>
                         )}
-                        
+
                         {/* OAuth 2.0 */}
                         {authType === 'oauth2' && (
                           <div className="space-y-3">
@@ -862,12 +867,87 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                         )}
                       </div>
                     )}
+
+                    {activeTab === 'import' && (
+                      <div className="py-2 space-y-6">
+                        {/* File Import Section */}
+                        <div className="space-y-3">
+                          <h3 className="text-sm font-medium text-primary">Import from File</h3>
+                          <p className="text-xs text-accent1">Upload a JSON file containing an API request definition.</p>
+
+                          <button
+                            onClick={handleImportClick}
+                            className="flex items-center justify-center w-full p-4 border-2 border-dashed border-accent2/30 rounded-md 
+                                     hover:border-primary/50 hover:bg-primary/5 transition-colors group"
+                          >
+                            <div className="flex flex-col items-center space-y-2">
+                              <Upload className="text-accent1 group-hover:text-primary transition-colors" size={24} />
+                              <span className="text-sm font-medium text-accent1 group-hover:text-primary">Click to upload JSON</span>
+                            </div>
+                          </button>
+
+                          {importError && (
+                            <div className="flex items-center text-red-500 text-xs mt-2">
+                              <AlertCircle size={14} className="mr-1" />
+                              {importError}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="h-px bg-accent2/20" />
+
+                        {/* cURL Import Section */}
+                        <div className="space-y-3">
+                          <h3 className="text-sm font-medium text-primary">Paste cURL Command</h3>
+                          <p className="text-xs text-accent1">Paste a cURL command to automatically populate the request details.</p>
+
+                          <textarea
+                            value={curlCommand}
+                            onChange={(e) => setCurlCommand(e.target.value)}
+                            placeholder="curl -X POST https://api.example.com/data -H 'Content-Type: application/json' -d '{...}'"
+                            className="w-full h-32 p-3 rounded-md border border-accent2/30 
+                                     text-sm font-mono text-primary bg-secondary 
+                                     focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-none"
+                          />
+
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => {
+                                try {
+                                  const parsed = parseCurlCommand(curlCommand);
+                                  if (parsed.url) updateApiUrl(parsed.url);
+                                  if (parsed.method) updateApiMethod(parsed.method);
+                                  if (Object.keys(parsed.headers).length > 0) updateApiHeaders(parsed.headers);
+                                  if (parsed.body) updateApiBody(parsed.body);
+
+                                  // Switch to params tab to show results
+                                  if (parsed.url || parsed.method !== 'GET') {
+                                    setActiveTab('params');
+                                    setCurlCommand(''); // Clear input on success
+                                  }
+                                } catch (e) {
+                                  setImportError('Failed to parse cURL command');
+                                }
+                              }}
+                              disabled={!curlCommand.trim()}
+                              className={`px-4 py-2 rounded-md text-sm font-medium flex items-center
+                                        ${!curlCommand.trim()
+                                  ? 'bg-accent2/10 text-accent1/50 cursor-not-allowed'
+                                  : 'bg-primary text-white hover:bg-primary/90'}`}
+                            >
+                              <ArrowUpFromLine size={16} className="mr-2" />
+                              Import cURL
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               </div>
-              
+
               {/* Response section styled to match monotone UI */}
-              <motion.div 
+              <motion.div
                 className="border-t border-accent2/30 bg-accent2/5 p-4"
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -885,16 +965,16 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                       ) : null}
                       <span className="text-xs font-medium text-accent1">
                         Status: {
-                          apiRequest.loading ? 
-                            <span className="text-primary">Loading...</span> : 
-                            apiRequest.error ? 
+                          apiRequest.loading ?
+                            <span className="text-primary">Loading...</span> :
+                            apiRequest.error ?
                               <span className="text-primary/80">Error</span> :
-                              apiRequest.statusCode ? 
+                              apiRequest.statusCode ?
                                 <span className={
-                                  apiRequest.statusCode >= 200 && apiRequest.statusCode < 300 
-                                    ? "text-primary" 
-                                    : apiRequest.statusCode >= 400 
-                                      ? "text-primary/80" 
+                                  apiRequest.statusCode >= 200 && apiRequest.statusCode < 300
+                                    ? "text-primary"
+                                    : apiRequest.statusCode >= 400
+                                      ? "text-primary/80"
                                       : "text-accent1"
                                 }>
                                   {apiRequest.statusCode} {getStatusText(apiRequest.statusCode)}
@@ -907,19 +987,19 @@ export const ApiPanel: React.FC<ApiPanelProps> = ({
                       Time: {responseTime ? `${responseTime}ms` : '--'}
                     </span>
                     <span className="text-xs text-accent1">
-                      Size: {responseSize ? 
-                        responseSize < 1024 ? 
-                          `${responseSize}B` : 
-                          `${(responseSize / 1024).toFixed(1)}KB` 
+                      Size: {responseSize ?
+                        responseSize < 1024 ?
+                          `${responseSize}B` :
+                          `${(responseSize / 1024).toFixed(1)}KB`
                         : '--'}
                     </span>
                   </div>
                 </div>
               </motion.div>
             </motion.div>
-          </motion.div>
+          </motion.div >
         )}
-      </AnimatePresence>
+      </AnimatePresence >
     </>
   );
 }; 

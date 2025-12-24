@@ -1,18 +1,18 @@
-import React, { useCallback, useRef, useState, useEffect } from 'react';
-import ReactFlow, { 
-  ReactFlowProvider, 
-  Node, 
-  Edge, 
+import React, { useRef, useState, useEffect } from 'react';
+import ReactFlow, {
+  ReactFlowProvider,
+  Node,
+  Edge,
   ConnectionMode,
   useReactFlow,
-  Panel,
+  MiniMap,
 } from 'reactflow';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import 'reactflow/dist/style.css';
 import { useEditorStore } from '../../store/editorStore';
 import { FlowControls } from './FlowControls';
 import { nodeTypes } from './FlowConfig';
-import { calculateNodePositions } from '../../utils/layout/positioning';
+import { getLayoutedElements } from '../../utils/layout/elkLayout';
 import { createEdges } from '../../utils/layout/edges';
 
 interface FlowProps {
@@ -21,29 +21,34 @@ interface FlowProps {
 
 const Flow: React.FC<FlowProps> = ({ openApiPanel }) => {
   const nodes = useEditorStore((state) => state.nodes);
+  const setHoveredNodeId = useEditorStore((state) => state.setHoveredNodeId);
   const reactFlowInstance = useReactFlow();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [isPanning, setIsPanning] = useState(false);
   const [spacePressed, setSpacePressed] = useState(false);
-  
-  const { flowNodes, flowEdges } = React.useMemo(() => {
-    const positions = calculateNodePositions(nodes);
-    
-    const elements: Node[] = nodes.map((node) => ({
-      id: node.id,
-      type: 'object',
-      data: node,
-      position: positions.get(node.id) || { x: 0, y: 0 },
-      draggable: false,
-      selectable: false,
-    }));
 
-    const edges: Edge[] = createEdges(nodes);
-    
-    return {
-      flowNodes: elements,
-      flowEdges: edges,
+  const [flowNodes, setFlowNodes] = useState<Node[]>([]);
+  const [flowEdges, setFlowEdges] = useState<Edge[]>([]);
+
+  useEffect(() => {
+    const layoutNodes = async () => {
+      const edges = createEdges(nodes);
+      const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(nodes, edges);
+
+      const elements: Node[] = layoutedNodes.map((node) => ({
+        id: node.id,
+        type: 'object',
+        data: node,
+        position: node.position || { x: 0, y: 0 },
+        draggable: false,
+        selectable: false,
+      }));
+
+      setFlowNodes(elements);
+      setFlowEdges(layoutedEdges);
     };
+
+    layoutNodes();
   }, [nodes]);
 
   // Initialize view once nodes are loaded
@@ -52,22 +57,22 @@ const Flow: React.FC<FlowProps> = ({ openApiPanel }) => {
       // Check if editor is open
       const editorPanel = document.querySelector('[class*="fixed top-1.5 bottom-1.5 left-1.5 w-[400px]"]');
       const isEditorOpen = editorPanel && !editorPanel.classList.contains('-translate-x-[calc(100%+6px)]');
-      
+
       // Get the editor width
       const editorWidth = isEditorOpen ? 400 : 0;
-      
+
       // Calculate the bounds without animation
       reactFlowInstance.fitView({
         padding: 0.3,
         duration: 0, // No animation for this step
       });
-      
+
       // Get the calculated viewport
       const viewport = reactFlowInstance.getViewport();
-      
+
       // Apply the viewport with editor offset in a single animation
       const offsetX = isEditorOpen ? (editorWidth / 2) : 0;
-      
+
       // Set the viewport with offset in one smooth animation
       reactFlowInstance.setViewport(
         {
@@ -79,7 +84,7 @@ const Flow: React.FC<FlowProps> = ({ openApiPanel }) => {
       );
     }
   }, [flowNodes.length, reactFlowInstance]);
-  
+
   // Handle keyboard events for spacebar panning
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -89,7 +94,7 @@ const Flow: React.FC<FlowProps> = ({ openApiPanel }) => {
         document.body.style.cursor = 'grab';
       }
     };
-    
+
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         setSpacePressed(false);
@@ -97,20 +102,20 @@ const Flow: React.FC<FlowProps> = ({ openApiPanel }) => {
         document.body.style.cursor = 'default';
       }
     };
-    
+
     // Only add event listeners if reactFlowWrapper is available
     if (reactFlowWrapper.current) {
       window.addEventListener('keydown', handleKeyDown);
       window.addEventListener('keyup', handleKeyUp);
     }
-    
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       document.body.style.cursor = 'default';
     };
   }, [spacePressed, reactFlowWrapper]);
-  
+
   // Handle mouse events for spacebar+drag panning
   useEffect(() => {
     const handleMouseDown = () => {
@@ -119,26 +124,26 @@ const Flow: React.FC<FlowProps> = ({ openApiPanel }) => {
         document.body.style.cursor = 'grabbing';
       }
     };
-    
+
     const handleMouseUp = () => {
       if (spacePressed) {
         setIsPanning(false);
         document.body.style.cursor = 'grab';
       }
     };
-    
+
     if (reactFlowWrapper.current) {
       window.addEventListener('mousedown', handleMouseDown);
       window.addEventListener('mouseup', handleMouseUp);
     }
-    
+
     return () => {
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [spacePressed, reactFlowWrapper]);
-  
-  const onInit = (instance: any) => {
+
+  const onInit = () => {
     // Enable zooming with mouse wheel
     if (reactFlowWrapper.current) {
       reactFlowWrapper.current.addEventListener('wheel', (event) => {
@@ -164,8 +169,8 @@ const Flow: React.FC<FlowProps> = ({ openApiPanel }) => {
   }, [flowNodes]);
 
   return (
-    <motion.div 
-      className="h-full w-full relative" 
+    <motion.div
+      className="h-full w-full relative"
       ref={reactFlowWrapper}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -181,7 +186,11 @@ const Flow: React.FC<FlowProps> = ({ openApiPanel }) => {
         connectionMode={ConnectionMode.Loose}
         defaultEdgeOptions={{
           type: 'smoothstep',
-          style: { stroke: '#879AF8', strokeWidth: 1.5 },
+          style: {
+            stroke: '#879AF8',
+            strokeWidth: 1.5,
+            strokeDasharray: '5 5', // Make the line dotted/dashed
+          },
           animated: true, // Add animation to edges
         }}
         minZoom={0.1}
@@ -198,9 +207,18 @@ const Flow: React.FC<FlowProps> = ({ openApiPanel }) => {
         panOnDrag={spacePressed} // Enable panning when space is pressed
         selectionOnDrag={false}
         panActivationKeyCode="Space"
+        onNodeMouseEnter={(_, node) => setHoveredNodeId(node.id)}
+        onNodeMouseLeave={() => setHoveredNodeId(null)}
       >
-        <FlowControls 
-          isPanning={isPanning} 
+        <MiniMap
+          nodeColor="#879AF8"
+          maskColor="rgba(240, 242, 255, 0.6)"
+          className="!bottom-1.5 !right-1.5 !bg-white/50 !backdrop-blur-sm !border !border-accent2/20 !rounded-lg"
+          zoomable
+          pannable
+        />
+        <FlowControls
+          isPanning={isPanning}
           setSpacePressed={setSpacePressed}
           openApiPanel={openApiPanel}
         />

@@ -14,6 +14,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     loading: false,
     error: null,
   },
+  hoveredNodeId: null,
   updateRawData: (data) => {
     set((state) => ({
       rawData: data,
@@ -49,7 +50,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const firstItem = apiConfig.item[0];
       if (firstItem.request) {
         const request = firstItem.request;
-        
+
         // Extract URL
         let url = '';
         if (typeof request.url === 'string') {
@@ -57,10 +58,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         } else if (request.url && request.url.raw) {
           url = request.url.raw;
         }
-        
+
         // Extract method
         const method = request.method as RequestMethod || 'GET';
-        
+
         // Extract headers
         const headers: Record<string, string> = {};
         if (request.header && Array.isArray(request.header)) {
@@ -70,7 +71,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             }
           });
         }
-        
+
         // Extract body
         let body = '';
         if (request.body) {
@@ -80,7 +81,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             body = JSON.stringify(request.body.json, null, 2);
           }
         }
-        
+
         // Update API request
         set((state) => ({
           apiRequest: {
@@ -91,19 +92,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             body
           }
         }));
-        
+
         return;
       }
     }
-    
+
     // Handle simple JSON format
     const { url, method, headers, body } = apiConfig;
-    
+
     const updatedRequest: Partial<APIRequest> = {
       loading: false,
       error: null
     };
-    
+
     if (url) updatedRequest.url = url;
     if (method && ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
       updatedRequest.method = method as RequestMethod;
@@ -120,7 +121,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         }
       }
     }
-    
+
     set((state) => ({
       apiRequest: { ...state.apiRequest, ...updatedRequest }
     }));
@@ -128,38 +129,38 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   sendApiRequest: async () => {
     const { apiRequest, updateRawData, selectedFormat } = get();
     const { url, method, headers, body } = apiRequest;
-    
+
     if (!url) {
       set((state) => ({
         apiRequest: { ...state.apiRequest, error: 'URL is required' }
       }));
       return;
     }
-    
+
     set((state) => ({
       apiRequest: { ...state.apiRequest, loading: true, error: null, statusCode: undefined }
     }));
-    
+
     try {
       const response = await fetch(url, {
         method,
         headers,
         body: ['GET', 'HEAD'].includes(method) ? undefined : body,
       });
-      
+
       const contentType = response.headers.get('content-type') || '';
       const statusCode = response.status;
-      
+
       if (contentType.includes('application/json')) {
         const jsonData = await response.json();
-        
+
         // Format and display the JSON data
         updateRawData(JSON.stringify(jsonData, null, 2));
-        
+
         set((state) => ({
-          apiRequest: { 
-            ...state.apiRequest, 
-            loading: false, 
+          apiRequest: {
+            ...state.apiRequest,
+            loading: false,
             response: jsonData,
             statusCode
           }
@@ -167,26 +168,27 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       } else {
         const textData = await response.text();
         updateRawData(textData);
-        
+
         set((state) => ({
-          apiRequest: { 
-            ...state.apiRequest, 
-            loading: false, 
+          apiRequest: {
+            ...state.apiRequest,
+            loading: false,
             response: textData,
             statusCode
           }
         }));
       }
-      
+
     } catch (error) {
       set((state) => ({
-        apiRequest: { 
-          ...state.apiRequest, 
-          loading: false, 
+        apiRequest: {
+          ...state.apiRequest,
+          loading: false,
           error: error instanceof Error ? error.message : 'Failed to fetch',
           statusCode: undefined
         }
       }));
     }
-  }
+  },
+  setHoveredNodeId: (nodeId) => set({ hoveredNodeId: nodeId }),
 }));

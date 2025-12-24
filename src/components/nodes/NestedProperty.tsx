@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import { Property } from '../../types/nodes';
+import { TypeBadge } from './TypeBadge';
 
 interface NestedPropertyProps {
   property: Property;
@@ -14,9 +15,9 @@ export const NestedProperty: React.FC<NestedPropertyProps> = ({
   onToggle,
 }) => {
   const isArray = Array.isArray(property.value);
-  
+
   return (
-    <div 
+    <div
       onClick={onToggle}
       className="flex items-center gap-2 py-1.5 px-2 hover:bg-primary/5 rounded cursor-pointer group"
     >
@@ -25,6 +26,7 @@ export const NestedProperty: React.FC<NestedPropertyProps> = ({
       ) : (
         <ChevronRight size={14} className="text-accent1" />
       )}
+      <TypeBadge type={property.type} />
       <span className="text-primary font-medium">{property.key}:</span>
       <span className="text-accent1">
         {isArray ? '[]' : '{}'}

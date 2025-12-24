@@ -56,4 +56,6 @@ export interface EditorState {
   updateApiBody: (body: string) => void;
   importApiRequest: (apiConfig: ImportableAPIConfig) => void;
   sendApiRequest: () => Promise<void>;
+  hoveredNodeId: string | null;
+  setHoveredNodeId: (nodeId: string | null) => void;
 }
